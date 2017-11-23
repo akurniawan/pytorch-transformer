@@ -39,7 +39,8 @@ class AttentionTest(unittest.TestCase):
             attention_window_size=3,
             num_units=128,
             query_size=self.query.size(1),
-            memory_size=self.keys.size(2))
+            memory_size=self.keys.size(2),
+            score_fn="dot")
 
         context, alignment_score = luong_attention(self.query, self.keys, self.keys.size(1))
 
