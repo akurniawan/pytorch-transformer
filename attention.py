@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -50,6 +51,70 @@ class BahdanauAttention(nn.Module):
         total_context = context.sum(1)
 
         return total_context, alignment_score
+
+
+class LuongLocalAttention(nn.Module):
+    SCORE_FN = {
+        "dot": "_dot_score",
+        "general": "_general_score",
+        "concat": "_concat_score"
+    }
+
+    def __init__(self,
+                 attention_window_size,
+                 num_units,
+                 query_size,
+                 memory_size,
+                 score_fn="dot"):
+        super(LuongLocalAttention, self).__init__()
+
+        if score_fn not in self.SCORE_FN.keys():
+            raise ValueError()
+
+        self._attention_window_size = attention_window_size
+        self._softmax = nn.Softmax()
+        self._score_fn = score_fn
+
+        self.query_layer = nn.Linear(query_size, num_units, bias=False)
+        self.memory_layer = nn.Linear(memory_size, num_units, bias=False)
+        self.alignment_layer = nn.Linear(num_units, 1, bias=False)
+
+    def _dot_score(self, query, keys, key_lengths=None):
+        depth = query.size(-1)
+        key_units = keys.size(-1)
+        if depth != key_units:
+            raise ValueError(
+                "Incompatible inner dimensions between query and keys. "
+                "Query has units: %d. Keys have units: %d. "
+                "Dot score requires you to have same size between num_units in "
+                "query and keys" % (depth, key_units))
+
+        # Expand query to [B x 1 x embedding dim] for broadcasting
+        extended_query = query.unsqueeze(1)
+
+        # Transpose the keys so that we can multiply it
+        tkeys = keys.transpose(1, 2)
+
+        alignment = torch.matmul(extended_query, tkeys)
+
+        # Result of the multiplication will be in size [B x 1 x embedding dim]
+        # we can safely squeeze the dimension
+        return alignment.squeeze(1)
+
+    def forward(self, query, keys, key_lengths):
+        score_fn = getattr(self, self.SCORE_FN[self._score_fn])
+        alignment_score = score_fn(query, keys, key_lengths)
+        weight = self._softmax(alignment_score)
+
+        context = weight.unsqueeze(2) * keys
+        total_context = context.sum(1)
+
+        return total_context, alignment_score
+
+    @property
+    def attention_window_size(self):
+        return self._attention_window_size
+
 
 class MultiHeadAttention(nn.Module):
     def __init__(self):

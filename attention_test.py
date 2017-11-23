@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from torch.autograd import Variable
 
-from attention import BahdanauAttention
+from attention import (BahdanauAttention, LuongLocalAttention)
 
 
 class AttentionTest(unittest.TestCase):
@@ -14,20 +14,35 @@ class AttentionTest(unittest.TestCase):
         torch.manual_seed(123)
         np.random.seed(123)
 
-    def test_bahdanau(self):
         query_size = (3, 20)
-        keys_size = (3, 15, 10)
-        context_size = (keys_size[0], keys_size[2])
-        alignment_size = (keys_size[0], keys_size[1])
+        keys_size = (3, 15, 20)
+        self.context_size = (keys_size[0], keys_size[2])
+        self.alignment_size = (keys_size[0], keys_size[1])
 
-        query = Variable(
+        self.query = Variable(
             torch.from_numpy(np.random.randn(*query_size).astype(np.float32)))
-        keys = Variable(
+        self.keys = Variable(
             torch.from_numpy(np.random.randn(*keys_size).astype(np.float32)))
 
-        bahdanau_attention = BahdanauAttention(128, query.size(1),
-                                               keys.size(2))
-        context, alignment_score = bahdanau_attention(query, keys)
+    def test_bahdanau_attention(self):
+        bahdanau_attention = BahdanauAttention(
+            num_units=128,
+            query_size=self.query.size(1),
+            memory_size=self.keys.size(2))
+        context, alignment_score = bahdanau_attention(self.query, self.keys)
 
-        self.assertEqual(context.size(), context_size)
-        self.assertEqual(alignment_score.size(), alignment_size)
+        self.assertEqual(context.size(), self.context_size)
+        self.assertEqual(alignment_score.size(), self.alignment_size)
+
+    def test_local_luong_attention(self):
+        luong_attention = LuongLocalAttention(
+            attention_window_size=3,
+            num_units=128,
+            query_size=self.query.size(1),
+            memory_size=self.keys.size(2))
+
+        context, alignment_score = luong_attention(self.query, self.keys,
+                                                   self.keys.size(1))
+
+        self.assertEqual(context.size(), self.context_size)
+        self.assertEqual(alignment_score.size(), self.alignment_size)
