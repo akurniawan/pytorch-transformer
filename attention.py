@@ -42,11 +42,11 @@ class BahdanauAttention(nn.Module):
         # To get the context, this is the original formula
         # context = sum(weight * keys)
         # In order to multiply those two, we need to reshape the weight
-        # from [B x S] into [B x 1 x S] for broacasting.
+        # from [B x S] into [B x S x 1] for broacasting.
         # The multiplication will result in [B x S x embedding]. Remember,
         # we want the score as the sum over all the steps. Therefore, we will
         # sum it over the 1st index
-        context = weight.unsqueeze(1) * keys
+        context = weight.unsqueeze(2) * keys
         total_context = context.sum(1)
 
         return total_context, alignment_score
