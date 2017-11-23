@@ -50,3 +50,7 @@ class BahdanauAttention(nn.Module):
         total_context = context.sum(1)
 
         return total_context, alignment_score
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self):
+        pass
