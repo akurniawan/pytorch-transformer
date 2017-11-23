@@ -54,7 +54,7 @@ class BahdanauAttention(nn.Module):
 
 
 class LuongLocalAttention(nn.Module):
-    SCORE_FN = {
+    _SCORE_FN = {
         "dot": "_dot_score",
         "general": "_general_score",
         "concat": "_concat_score"
@@ -68,7 +68,7 @@ class LuongLocalAttention(nn.Module):
                  score_fn="dot"):
         super(LuongLocalAttention, self).__init__()
 
-        if score_fn not in self.SCORE_FN.keys():
+        if score_fn not in self._SCORE_FN.keys():
             raise ValueError()
 
         self._attention_window_size = attention_window_size
@@ -102,7 +102,7 @@ class LuongLocalAttention(nn.Module):
         return alignment.squeeze(1)
 
     def forward(self, query, keys, key_lengths):
-        score_fn = getattr(self, self.SCORE_FN[self._score_fn])
+        score_fn = getattr(self, self._SCORE_FN[self._score_fn])
         alignment_score = score_fn(query, keys, key_lengths)
         weight = self._softmax(alignment_score)
 
