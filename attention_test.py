@@ -34,15 +34,14 @@ class AttentionTest(unittest.TestCase):
         self.assertEqual(context.size(), self.context_size)
         self.assertEqual(alignment_score.size(), self.alignment_size)
 
-    def test_local_luong_attention(self):
+    def test_local_luong_attention_dot(self):
         luong_attention = LuongLocalAttention(
             attention_window_size=3,
             num_units=128,
             query_size=self.query.size(1),
             memory_size=self.keys.size(2))
 
-        context, alignment_score = luong_attention(self.query, self.keys,
-                                                   self.keys.size(1))
+        context, alignment_score = luong_attention(self.query, self.keys, self.keys.size(1))
 
         self.assertEqual(context.size(), self.context_size)
         self.assertEqual(alignment_score.size(), self.alignment_size)
