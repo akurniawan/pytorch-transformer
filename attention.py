@@ -123,9 +123,12 @@ class LuongLocalAttention(nn.Module):
         alignment_point_dist = (extended_key_lengths - predictive_alignment).pow(2)
 
         alignment_point_dist = (-(alignment_point_dist/(2 * std[0]))).exp()
+        # TODO: add masking for value whose index is not in
+        # range of ai_start:ai_end
         weight = weight * alignment_point_dist
 
         context = weight.unsqueeze(2) * keys
+
         total_context = context.sum(1)
 
         return total_context, alignment_score
