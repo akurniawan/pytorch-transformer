@@ -41,8 +41,10 @@ class AttentionTest(unittest.TestCase):
             query_size=self.query.size(1),
             memory_size=self.keys.size(2),
             score_fn="dot")
-
-        context, alignment_score = luong_attention(self.query, self.keys, self.keys.size(1))
+        sentence_lengths = Variable(
+            torch.FloatTensor([self.keys.size(1)] * self.keys.size(0)))
+        context, alignment_score = luong_attention(self.query, self.keys,
+                                                   sentence_lengths)
 
         self.assertEqual(context.size(), self.context_size)
         self.assertEqual(alignment_score.size(), self.alignment_size)
