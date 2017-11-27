@@ -123,13 +123,20 @@ class LuongLocalAttention(nn.Module):
         alignment_point_dist = (extended_key_lengths - predictive_alignment).pow(2)
 
         alignment_point_dist = (-(alignment_point_dist/(2 * std[0]))).exp()
-        # TODO: add masking for value whose index is not in
-        # range of ai_start:ai_end
         weight = weight * alignment_point_dist
 
-        context = weight.unsqueeze(2) * keys
+        contexts = []
+        for i in range(weight.size(0)):
+            start = ai_start[i].int().data.numpy()[0]
+            end = ai_end[i].int().data.numpy()[0]
 
-        total_context = context.sum(1)
+            aligned_weight = weight[i, start:end]
+            aligned_keys = keys[i, start:end]
+
+            aligned_context = aligned_weight.unsqueeze(1) * aligned_keys
+            contexts.append(aligned_context.sum(0))
+
+        total_context = torch.stack(contexts, 0)
 
         return total_context, alignment_score
 
