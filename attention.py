@@ -53,7 +53,7 @@ class BahdanauAttention(nn.Module):
         return total_context, alignment_score
 
 
-class LuongLocalAttention(nn.Module):
+class LuongAttention(nn.Module):
     _SCORE_FN = {
         "dot": "_dot_score",
         "general": "_general_score",
@@ -65,8 +65,9 @@ class LuongLocalAttention(nn.Module):
                  num_units,
                  query_size,
                  memory_size,
+                 alignment="local",
                  score_fn="dot"):
-        super(LuongLocalAttention, self).__init__()
+        super(LuongAttention, self).__init__()
 
         if score_fn not in self._SCORE_FN.keys():
             raise ValueError()
@@ -74,6 +75,7 @@ class LuongLocalAttention(nn.Module):
         self._attention_window_size = attention_window_size
         self._softmax = nn.Softmax()
         self._score_fn = score_fn
+        self._alignment = alignment
 
         self.query_layer = nn.Linear(query_size, num_units, bias=False)
         self.predictive_alignment_layer = nn.Linear(num_units, 1, bias=False)
@@ -134,36 +136,40 @@ class LuongLocalAttention(nn.Module):
 
         weight = F.softmax(alignment_score)
 
-        extended_key_lengths = key_lengths.unsqueeze(1)
-        preprocessed_query = self.query_layer(query)
+        if self._alignment == "local":
+            extended_key_lengths = key_lengths.unsqueeze(1)
+            preprocessed_query = self.query_layer(query)
 
-        activated_query = F.tanh(preprocessed_query)
-        sigmoid_query = F.sigmoid(
-            self.predictive_alignment_layer(activated_query))
-        predictive_alignment = extended_key_lengths * sigmoid_query
+            activated_query = F.tanh(preprocessed_query)
+            sigmoid_query = F.sigmoid(
+                self.predictive_alignment_layer(activated_query))
+            predictive_alignment = extended_key_lengths * sigmoid_query
 
-        ai_start = predictive_alignment - self._attention_window_size
-        ai_end = predictive_alignment + self._attention_window_size
+            ai_start = predictive_alignment - self._attention_window_size
+            ai_end = predictive_alignment + self._attention_window_size
 
-        std = torch.FloatTensor([self._attention_window_size / 2.]).pow(2)
-        alignment_point_dist = (
-            extended_key_lengths - predictive_alignment).pow(2)
+            std = torch.FloatTensor([self._attention_window_size / 2.]).pow(2)
+            alignment_point_dist = (
+                extended_key_lengths - predictive_alignment).pow(2)
 
-        alignment_point_dist = (-(alignment_point_dist / (2 * std[0]))).exp()
-        weight = weight * alignment_point_dist
+            alignment_point_dist = (-(alignment_point_dist / (2 * std[0]))).exp()
+            weight = weight * alignment_point_dist
 
-        contexts = []
-        for i in range(weight.size(0)):
-            start = ai_start[i].int().data.numpy()[0]
-            end = ai_end[i].int().data.numpy()[0]
+            contexts = []
+            for i in range(weight.size(0)):
+                start = ai_start[i].int().data.numpy()[0]
+                end = ai_end[i].int().data.numpy()[0]
 
-            aligned_weight = weight[i, start:end]
-            aligned_keys = keys[i, start:end]
+                aligned_weight = weight[i, start:end]
+                aligned_keys = keys[i, start:end]
 
-            aligned_context = aligned_weight.unsqueeze(1) * aligned_keys
-            contexts.append(aligned_context.sum(0))
+                aligned_context = aligned_weight.unsqueeze(1) * aligned_keys
+                contexts.append(aligned_context.sum(0))
 
-        total_context = torch.stack(contexts, 0)
+            total_context = torch.stack(contexts, 0)
+        elif self._alignment == "global":
+            context = weight.unsqueeze(2) * keys
+            total_context = context.sum(1)
 
         return total_context, alignment_score
 
