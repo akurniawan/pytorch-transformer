@@ -31,7 +31,7 @@ class BahdanauAttention(nn.Module):
 
         # Now the alignment size is [B x S x 1], We need to squeeze it
         # so that we can use Softmax later on. Converting to [B x S]
-        return alignment.squeeze()
+        return alignment.squeeze(2)
 
     def forward(self, query, keys):
         # Calculate the alignment score
