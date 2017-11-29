@@ -76,12 +76,19 @@ class LuongLocalAttention(nn.Module):
         self._score_fn = score_fn
 
         self.query_layer = nn.Linear(query_size, num_units, bias=False)
-        self.memory_layer = nn.Linear(memory_size, num_units, bias=False)
-        self.predictive_alignment_layer = nn.Linear(
-            num_units, 1, bias=False)
+        self.predictive_alignment_layer = nn.Linear(num_units, 1, bias=False)
         self.alignment_layer = nn.Linear(num_units, 1, bias=False)
 
-    def _dot_score(self, query, keys, key_lengths=None):
+        if score_fn == "general":
+            self.general_memory_layer = nn.Linear(
+                memory_size, query_size, bias=False)
+        elif score_fn == "concat":
+            self.concat_memory_layer1 = nn.Linear(
+                2 * memory_size, num_units, bias=False)
+            self.concat_memory_layer2 = nn.Linear(
+                num_units, 1, bias=False)
+
+    def _dot_score(self, query, keys):
         depth = query.size(-1)
         key_units = keys.size(-1)
         if depth != key_units:
@@ -103,9 +110,27 @@ class LuongLocalAttention(nn.Module):
         # we can safely squeeze the dimension
         return alignment.squeeze(1)
 
+    def _general_score(self, query, keys):
+        weighted_keys = self.general_memory_layer(keys)
+        extended_query = query.unsqueeze(1)
+        weighted_keys = weighted_keys.transpose(1, 2)
+
+        alignment = torch.matmul(extended_query, weighted_keys)
+        return alignment.squeeze(1)
+
+    def _concat_score(self, query, keys):
+        expanded_query = query.unsqueeze(1).expand(*keys.size())
+        concatenated_hidden = torch.cat([expanded_query, keys], dim=2)
+        weighted_concatenated_hidden = self.concat_memory_layer1(
+            concatenated_hidden)
+        temp_score = F.tanh(weighted_concatenated_hidden)
+        alignment = self.concat_memory_layer2(temp_score)
+
+        return alignment.squeeze(2)
+
     def forward(self, query, keys, key_lengths):
         score_fn = getattr(self, self._SCORE_FN[self._score_fn])
-        alignment_score = score_fn(query, keys, key_lengths)
+        alignment_score = score_fn(query, keys)
 
         weight = F.softmax(alignment_score)
 
@@ -113,16 +138,18 @@ class LuongLocalAttention(nn.Module):
         preprocessed_query = self.query_layer(query)
 
         activated_query = F.tanh(preprocessed_query)
-        sigmoid_query = F.sigmoid(self.predictive_alignment_layer(activated_query))
+        sigmoid_query = F.sigmoid(
+            self.predictive_alignment_layer(activated_query))
         predictive_alignment = extended_key_lengths * sigmoid_query
 
         ai_start = predictive_alignment - self._attention_window_size
         ai_end = predictive_alignment + self._attention_window_size
 
         std = torch.FloatTensor([self._attention_window_size / 2.]).pow(2)
-        alignment_point_dist = (extended_key_lengths - predictive_alignment).pow(2)
+        alignment_point_dist = (
+            extended_key_lengths - predictive_alignment).pow(2)
 
-        alignment_point_dist = (-(alignment_point_dist/(2 * std[0]))).exp()
+        alignment_point_dist = (-(alignment_point_dist / (2 * std[0]))).exp()
         weight = weight * alignment_point_dist
 
         contexts = []

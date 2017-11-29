@@ -48,3 +48,33 @@ class AttentionTest(unittest.TestCase):
 
         self.assertEqual(context.size(), self.context_size)
         self.assertEqual(alignment_score.size(), self.alignment_size)
+
+    def test_local_luong_attention_general(self):
+        luong_attention = LuongLocalAttention(
+            attention_window_size=3,
+            num_units=128,
+            query_size=self.query.size(1),
+            memory_size=self.keys.size(2),
+            score_fn="general")
+        sentence_lengths = Variable(
+            torch.FloatTensor([self.keys.size(1)] * self.keys.size(0)))
+        context, alignment_score = luong_attention(self.query, self.keys,
+                                                   sentence_lengths)
+
+        self.assertEqual(context.size(), self.context_size)
+        self.assertEqual(alignment_score.size(), self.alignment_size)
+
+    def test_local_luong_attention_concat(self):
+        luong_attention = LuongLocalAttention(
+            attention_window_size=3,
+            num_units=128,
+            query_size=self.query.size(1),
+            memory_size=self.keys.size(2),
+            score_fn="concat")
+        sentence_lengths = Variable(
+            torch.FloatTensor([self.keys.size(1)] * self.keys.size(0)))
+        context, alignment_score = luong_attention(self.query, self.keys,
+                                                   sentence_lengths)
+
+        self.assertEqual(context.size(), self.context_size)
+        self.assertEqual(alignment_score.size(), self.alignment_size)
