@@ -102,6 +102,5 @@ class AttentionTest(unittest.TestCase):
             key_dim=self.keys.size(2),
             num_units=24)
         attention_result = mh_attention(self.keys, self.keys)
-        print("running")
 
         self.assertEqual(attention_result.size(), self.keys.size())
