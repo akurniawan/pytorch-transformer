@@ -101,17 +101,6 @@ class AttentionTest(unittest.TestCase):
             query_dim=self.keys.size(2),
             key_dim=self.keys.size(2),
             num_units=24)
-        mh_attention(self.keys, self.keys)
-        # sentence_lengths = Variable(
-        #     torch.FloatTensor([self.keys.size(1)] * self.keys.size(0)))
-        # context, alignment_score = luong_attention(self.query, self.keys,
-        #                                            sentence_lengths)
+        attention_result = mh_attention(self.keys, self.keys)
 
-        # self.assertEqual(context.size(), self.context_size)
-        # self.assertEqual(alignment_score.size(), self.alignment_size)
-
-class BatchNormalizationTest(unittest.TestCase):
-    def test_dynamic_bn(self):
-        dbn = DynamicBatchNormalization(20)
-        inputs = torch.randn(3, 15, 20)
-        print(dbn(inputs).size())
+        self.assertEqual(attention_result.size(), self.keys.size())
