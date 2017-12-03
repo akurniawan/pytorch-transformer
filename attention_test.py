@@ -6,7 +6,8 @@ import torch.nn as nn
 
 from torch.autograd import Variable
 
-from attention import (BahdanauAttention, LuongAttention)
+from attention import (BahdanauAttention, LuongAttention, MultiHeadAttention)
+from attention import DynamicBatchNormalization
 
 
 class AttentionTest(unittest.TestCase):
@@ -14,8 +15,8 @@ class AttentionTest(unittest.TestCase):
         torch.manual_seed(123)
         np.random.seed(123)
 
-        query_size = (3, 20)
-        keys_size = (3, 15, 20)
+        query_size = (3, 24)
+        keys_size = (3, 15, 24)
         self.context_size = (keys_size[0], keys_size[2])
         self.alignment_size = (keys_size[0], keys_size[1])
 
@@ -94,3 +95,23 @@ class AttentionTest(unittest.TestCase):
 
         self.assertEqual(context.size(), self.context_size)
         self.assertEqual(alignment_score.size(), self.alignment_size)
+
+    def test_multi_head_attention(self):
+        mh_attention = MultiHeadAttention(
+            query_dim=self.keys.size(2),
+            key_dim=self.keys.size(2),
+            num_units=24)
+        mh_attention(self.keys, self.keys)
+        # sentence_lengths = Variable(
+        #     torch.FloatTensor([self.keys.size(1)] * self.keys.size(0)))
+        # context, alignment_score = luong_attention(self.query, self.keys,
+        #                                            sentence_lengths)
+
+        # self.assertEqual(context.size(), self.context_size)
+        # self.assertEqual(alignment_score.size(), self.alignment_size)
+
+class BatchNormalizationTest(unittest.TestCase):
+    def test_dynamic_bn(self):
+        dbn = DynamicBatchNormalization(20)
+        inputs = torch.randn(3, 15, 20)
+        print(dbn(inputs).size())

@@ -1,6 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
+from torch.nn.parameter import Parameter
+
+from bn import DynamicBatchNormalization
 
 
 class BahdanauAttention(nn.Module):
@@ -87,8 +91,7 @@ class LuongAttention(nn.Module):
         elif score_fn == "concat":
             self.concat_memory_layer1 = nn.Linear(
                 2 * memory_size, num_units, bias=False)
-            self.concat_memory_layer2 = nn.Linear(
-                num_units, 1, bias=False)
+            self.concat_memory_layer2 = nn.Linear(num_units, 1, bias=False)
 
     def _dot_score(self, query, keys):
         depth = query.size(-1)
@@ -152,7 +155,8 @@ class LuongAttention(nn.Module):
             alignment_point_dist = (
                 extended_key_lengths - predictive_alignment).pow(2)
 
-            alignment_point_dist = (-(alignment_point_dist / (2 * std[0]))).exp()
+            alignment_point_dist = (-(alignment_point_dist /
+                                      (2 * std[0]))).exp()
             weight = weight * alignment_point_dist
 
             contexts = []
@@ -179,5 +183,63 @@ class LuongAttention(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self):
-        pass
+    def __init__(self,
+                 query_dim,
+                 key_dim,
+                 num_units,
+                 dropout_p=0.5,
+                 h=8,
+                 is_training=False):
+        super(MultiHeadAttention, self).__init__()
+
+        if query_dim != key_dim:
+            raise ValueError("query_dim and key_dim are not the same")
+        if num_units % h != 0:
+            raise ValueError("num_units must be dividable by h")
+        if query_dim != num_units:
+            raise ValueError("To employ residual connection, the number of "
+                             "query_dim and num_units must be the same")
+
+        self._num_units = num_units
+        self._h = h
+        self._key_dim = Variable(torch.FloatTensor([key_dim]))
+        self._dropout_p = dropout_p
+        self._is_training = is_training
+
+        self.query_layer = nn.Linear(query_dim, num_units, bias=False)
+        self.key_layer = nn.Linear(key_dim, num_units, bias=False)
+        self.value_layer = nn.Linear(key_dim, num_units, bias=False)
+        self.bn = DynamicBatchNormalization(num_units)
+
+    def forward(self, query, keys):
+        Q = self.query_layer(query)
+        K = self.key_layer(keys)
+        V = self.value_layer(keys)
+
+        # split each Q, K and V into h different values from dim 2
+        # and then merge them back together in dim 0
+        chunk_size = int(self._num_units / self._h)
+        Q = torch.cat(Q.split(split_size=chunk_size, dim=2), dim=0)
+        K = torch.cat(K.split(split_size=chunk_size, dim=2), dim=0)
+        V = torch.cat(V.split(split_size=chunk_size, dim=2), dim=0)
+
+        # calculate QK^T
+        attention = torch.matmul(Q, K.transpose(1, 2))
+        # normalize with sqrt(dk)
+        attention = attention / torch.sqrt(self._key_dim)
+        # put it to softmax
+        attention = F.softmax(attention)
+        # apply dropout
+        attention = F.dropout(attention, self._dropout_p, self._is_training)
+        # multiplyt it with V
+        attention = torch.matmul(attention, V)
+        # convert attention back to its input original size
+        restore_chunk_size = int(attention.size(0) / self._h)
+        attention = torch.cat(
+            attention.split(split_size=restore_chunk_size, dim=0), dim=2)
+        # residual connection
+        attention += query
+        # apply batch normalization
+        attention = self.bn(attention.data)
+
+        return attention
