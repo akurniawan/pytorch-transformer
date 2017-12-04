@@ -101,6 +101,8 @@ class AttentionTest(unittest.TestCase):
             query_dim=self.keys.size(2),
             key_dim=self.keys.size(2),
             num_units=24)
-        attention_result = mh_attention(self.keys, self.keys)
 
-        self.assertEqual(attention_result.size(), self.keys.size())
+        keys = torch.cat([self.keys, torch.zeros(3, 1, 24)], dim=1)
+        attention_result = mh_attention(keys, keys)
+
+        self.assertEqual(attention_result.size(), keys.size())

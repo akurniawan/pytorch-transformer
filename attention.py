@@ -189,6 +189,7 @@ class MultiHeadAttention(nn.Module):
                  num_units,
                  dropout_p=0.5,
                  h=8,
+                 is_masked=False,
                  is_training=False):
         super(MultiHeadAttention, self).__init__()
 
@@ -204,6 +205,7 @@ class MultiHeadAttention(nn.Module):
         self._h = h
         self._key_dim = Variable(torch.FloatTensor([key_dim]))
         self._dropout_p = dropout_p
+        self._is_masked = is_masked
         self._is_training = is_training
 
         self.query_layer = nn.Linear(query_dim, num_units, bias=False)
@@ -227,6 +229,24 @@ class MultiHeadAttention(nn.Module):
         attention = torch.matmul(Q, K.transpose(1, 2))
         # normalize with sqrt(dk)
         attention = attention / torch.sqrt(self._key_dim)
+        # use masking (usually for decoder) to prevent leftward
+        # information flow and retains auto-regressive property
+        # as said in the paper
+        if self._is_masked:
+            diag_vals = attention[0].sign().abs()
+            diag_mat = diag_vals.tril()
+            diag_mat = diag_mat.unsqueeze(0).expand(attention.size())
+            # we need to enforce converting mask to Variable, since
+            # in pytorch we can't do operation between Tensor and
+            # Variable
+            mask = Variable(
+                torch.ones(diag_mat.size()) * (-2**32 + 1), requires_grad=False)
+            # this is some trick that I use to combine the lower diagonal
+            # matrix and its masking. (diag_mat-1).abs() will reverse the value
+            # inside diag_mat, from 0 to 1 and 1 to zero. with this
+            # we don't need loop operation andn could perform our calculation
+            # faster
+            attention = (attention * diag_mat) + (mask * (diag_mat-1).abs())
         # put it to softmax
         attention = F.softmax(attention)
         # apply dropout
