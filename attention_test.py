@@ -15,8 +15,8 @@ class AttentionTest(unittest.TestCase):
         torch.manual_seed(123)
         np.random.seed(123)
 
-        query_size = (3, 24)
-        keys_size = (3, 15, 24)
+        query_size = (3, 512)
+        keys_size = (3, 15, 512)
         self.context_size = (keys_size[0], keys_size[2])
         self.alignment_size = (keys_size[0], keys_size[1])
 
@@ -100,9 +100,9 @@ class AttentionTest(unittest.TestCase):
         mh_attention = MultiHeadAttention(
             query_dim=self.keys.size(2),
             key_dim=self.keys.size(2),
-            num_units=24)
+            num_units=512)
 
-        keys = torch.cat([self.keys, torch.zeros(3, 1, 24)], dim=1)
+        keys = torch.cat([self.keys, torch.zeros(3, 1, 512)], dim=1)
         attention_result = mh_attention(keys, keys)
 
         self.assertEqual(attention_result.size(), keys.size())
