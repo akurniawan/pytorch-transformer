@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class PositionWiseFFN(nn.Module):
-    def __init__(self, feature_size, num_units):
+    def __init__(self, feature_size, num_units=[2048, 512]):
         super(PositionWiseFFN, self).__init__()
         self.ffn = self._build_ffn(feature_size, num_units)
 
