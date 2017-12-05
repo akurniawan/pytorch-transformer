@@ -42,7 +42,7 @@ class BahdanauAttention(nn.Module):
         alignment_score = self._score(query, keys)
 
         # Put it into softmax to get the weight of every steps
-        weight = F.softmax(alignment_score)
+        weight = F.softmax(alignment_score, dim=-1)
 
         # To get the context, this is the original formula
         # context = sum(weight * keys)
@@ -137,7 +137,7 @@ class LuongAttention(nn.Module):
         score_fn = getattr(self, self._SCORE_FN[self._score_fn])
         alignment_score = score_fn(query, keys)
 
-        weight = F.softmax(alignment_score)
+        weight = F.softmax(alignment_score, dim=-1)
 
         if self._alignment == "local":
             extended_key_lengths = key_lengths.unsqueeze(1)
@@ -248,7 +248,7 @@ class MultiHeadAttention(nn.Module):
             # faster
             attention = (attention * diag_mat) + (mask * (diag_mat-1).abs())
         # put it to softmax
-        attention = F.softmax(attention)
+        attention = F.softmax(attention, dim=-1)
         # apply dropout
         attention = F.dropout(attention, self._dropout_p, self._is_training)
         # multiplyt it with V
