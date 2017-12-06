@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
-from bn import DynamicBatchNormalization
+from modules.bn import DynamicBatchNormalization
 
 
 class BahdanauAttention(nn.Module):
@@ -260,6 +260,6 @@ class MultiHeadAttention(nn.Module):
         # residual connection
         attention += query
         # apply batch normalization
-        attention = self.bn(attention.data)
+        attention = self.bn(attention)
 
         return attention
