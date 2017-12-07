@@ -26,8 +26,11 @@ class TransformerDecoder(nn.Module):
     def forward(self, query, key):
         for dec in self.decoders:
             res1 = dec[0](query, query)
+            print(res1.size(), key.size())
             res2 = dec[1](res1, key)
+            print(res2.size())
             res3 = dec[2](res2)
+            print(res3.size())
             query = res3
 
         return res3
