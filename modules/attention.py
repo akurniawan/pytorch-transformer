@@ -189,8 +189,7 @@ class MultiHeadAttention(nn.Module):
                  num_units,
                  dropout_p=0.5,
                  h=8,
-                 is_masked=False,
-                 is_training=False):
+                 is_masked=False):
         super(MultiHeadAttention, self).__init__()
 
         if query_dim != key_dim:
@@ -206,7 +205,6 @@ class MultiHeadAttention(nn.Module):
         self._key_dim = Variable(torch.FloatTensor([key_dim]))
         self._dropout_p = dropout_p
         self._is_masked = is_masked
-        self._is_training = is_training
 
         self.query_layer = nn.Linear(query_dim, num_units, bias=False)
         self.key_layer = nn.Linear(key_dim, num_units, bias=False)
@@ -250,7 +248,7 @@ class MultiHeadAttention(nn.Module):
         # put it to softmax
         attention = F.softmax(attention, dim=-1)
         # apply dropout
-        attention = F.dropout(attention, self._dropout_p, self._is_training)
+        attention = F.dropout(attention, self._dropout_p)
         # multiplyt it with V
         attention = torch.matmul(attention, V)
         # convert attention back to its input original size
