@@ -3,7 +3,7 @@ import torch
 
 from torch.autograd import Variable
 
-from decoder import TransformerDecoder
+from modules.decoder import TransformerDecoder
 
 
 class TransformerDecoderTest(unittest.TestCase):
