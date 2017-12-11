@@ -118,7 +118,7 @@ if __name__ == '__main__':
         decoder_units=[512] * 6,
         batch_size=2,
         epochs=20,
-        decay_step=5,
+        decay_step=100,
         decay_percent=0.1,
         log_interval=2,
         save_interval=10,
