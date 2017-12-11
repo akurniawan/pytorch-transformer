@@ -18,7 +18,8 @@ from modules.transformer import Transformer
 
 
 def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
-         batch_size, epochs, decay_step, decay_percent, log_interval, save_interval, model_path):
+         batch_size, epochs, decay_step, decay_percent, log_interval,
+         save_interval, model_path):
     de = data.Field(batch_first=True)
     en = data.Field(batch_first=True)
 
