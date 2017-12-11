@@ -5,6 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from hooks import *
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from torchtext import data
 from torchtext import datasets
@@ -16,7 +18,7 @@ from modules.transformer import Transformer
 
 
 def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
-         batch_size, epochs, log_interval):
+         batch_size, epochs, decay_step, decay_percent, log_interval, save_interval, model_path):
     de = data.Field(batch_first=True)
     en = data.Field(batch_first=True)
 
@@ -31,15 +33,12 @@ def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
     de.build_vocab(train.trg, min_freq=3, max_size=80000)
     en.build_vocab(train.src, min_freq=3, max_size=80000)
 
-    transformer = Transformer(100,
-        len(en.vocab.freqs),
-        len(de.vocab.freqs),
-        encoder_emb_size,
-        decoder_emb_size,
-        encoder_units,
-        decoder_units)
+    transformer = Transformer(100, len(en.vocab.freqs), len(
+        de.vocab.freqs), encoder_emb_size, decoder_emb_size, encoder_units,
+                              decoder_units)
     loss_fn = nn.CrossEntropyLoss()
     opt = optim.Adam(transformer.parameters())
+    lr_decay = StepLR(opt, step_size=decay_step, gamma=decay_percent)
 
     if torch.cuda.is_available():
         device_data = 0
@@ -57,6 +56,7 @@ def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
 
     def training_update_function(batch):
         transformer.train()
+        lr_decay.step()
         opt.zero_grad()
 
         predictions = transformer(batch.src, batch.trg)
@@ -72,6 +72,7 @@ def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
         return loss.data[0]
 
     def validation_inference_function(batch):
+        transformer.eval()
         predictions = transformer(batch.src, batch.trg)
 
         flattened_predictions = predictions.view(-1, decoder_units[-1])
@@ -83,18 +84,29 @@ def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
 
     trainer = Trainer(train_iter, training_update_function, val_iter,
                       validation_inference_function)
+    trainer.add_event_handler(TrainingEvents.TRAINING_STARTED,
+                              restore_checkpoint_hook(transformer, model_path))
     trainer.add_event_handler(
         TrainingEvents.TRAINING_ITERATION_COMPLETED,
         log_training_simple_moving_average,
-        window_size=100,
+        window_size=10,
         metric_name="CrossEntropy",
-        should_log=
-        lambda trainer: trainer.current_iteration % log_interval == 0)
+        should_log=lambda trainer: trainer.current_iteration % log_interval == 0
+    )
+    trainer.add_event_handler(
+        TrainingEvents.TRAINING_ITERATION_COMPLETED,
+        save_checkpoint_hook(transformer, model_path),
+        should_save=
+        lambda trainer: trainer.current_iteration % save_interval == 0)
     trainer.add_event_handler(
         TrainingEvents.VALIDATION_COMPLETED,
         log_validation_simple_moving_average,
-        window_size=100,
+        window_size=10,
         metric_name="CrossEntropy")
+    trainer.add_event_handler(
+        TrainingEvents.TRAINING_COMPLETED,
+        save_checkpoint_hook(transformer, model_path),
+        should_save=lambda trainer: True)
     trainer.run(max_epochs=epochs, validate_every_epoch=True)
 
 
@@ -105,5 +117,9 @@ if __name__ == '__main__':
         encoder_units=[512] * 6,
         decoder_units=[512] * 6,
         batch_size=2,
-        epochs=10,
-        log_interval=1)
+        epochs=20,
+        decay_step=5,
+        decay_percent=0.1,
+        log_interval=2,
+        save_interval=10,
+        model_path="./transformer-cp.pt")
