@@ -33,6 +33,5 @@ class Transformer(nn.Module):
         decoder_result = self.decoder(dec_embed, encoder_result)
         output = self.output_layer(decoder_result)
         softmax = self.softmax(output)
-        print(softmax.size())
 
-        return softmax
+        return softmax, decoder_result
