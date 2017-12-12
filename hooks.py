@@ -35,12 +35,26 @@ def restore_checkpoint_hook(model, model_path, logger=print):
 def print_current_prediction_hook(vocab, logger=print):
     def print_current_condition(trainer, should_print):
         if should_print(trainer):
-            logger("[Current state of the model]")
-            logger("=" * 100)
-            last_hist = trainer.training_history[-1][0]
-            for hist in last_hist:
-                _, idx = hist.max(1)
-                print(idx.data.numpy())
-            logger("=" * 100)
+            result_str = ""
+            result_str += "Current state of the model\n"
+            result_str += ("=" * 100) + "\n"
+            pred_last_hist = trainer.training_history[-1][0]
+            trg_last_hist = trainer.training_history[-1][-1]
+            batch_size = pred_last_hist.size(0)
+            for this_idx, (pred, trg) in enumerate(
+                    zip(pred_last_hist, trg_last_hist)):
+                _, idx = pred.max(1)
+                preds = []
+                trgs = []
+                for pred_idx, trg_idx in zip(idx.data.numpy(),
+                                             trg.data.numpy()):
+                    preds.append(vocab.itos[pred_idx])
+                    trgs.append(vocab.itos[trg_idx])
+                result_str += (" ".join(preds)) + "\n"
+                result_str += (" ".join(trgs)) + "\n"
+                if this_idx < batch_size - 1:
+                    result_str += "\n"
+            result_str += ("=" * 100)
+            logger(result_str)
 
     return print_current_condition

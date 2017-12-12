@@ -19,35 +19,32 @@ from modules.transformer import Transformer
 
 def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
         decoder_emb_size, encoder_units, decoder_units, batch_size, epochs,
-        decay_step, decay_percent, log_interval, save_interval,
+        learning_rate, decay_step, decay_percent, log_interval, save_interval,
         compare_interval):
-    source = data.Field(batch_first=True)
-    target = data.Field(batch_first=True)
+    source = data.Field(batch_first=True, lower=True, init_token="<bos>")
+    target = data.Field(batch_first=True, lower=True, eos_token="<eos>")
 
     train, val, _ = datasets.WMT14.splits(
-        exts=(".de", ".en"),
+        exts=(".en", ".de"),
         root="./",
-        fields=(target, source),
+        fields=(source, target),
         train="train",
         validation="eval",
         test="test")
 
-    target.build_vocab(train.trg, min_freq=3, max_size=dec_max_vocab)
-    source.build_vocab(train.src, min_freq=3, max_size=enc_max_vocab)
-
-    encoder_vocab_size = len(source.vocab.freqs)
-    decoder_vocab_size = len(target.vocab.freqs)
+    source.build_vocab(train.src, min_freq=1, max_size=enc_max_vocab)
+    target.build_vocab(train.trg, min_freq=1, max_size=dec_max_vocab)
 
     transformer = Transformer(
         max_length=100,
-        enc_vocab_size=encoder_vocab_size,
-        dec_vocab_size=decoder_vocab_size,
+        enc_vocab=source.vocab,
+        dec_vocab=target.vocab,
         enc_emb_size=encoder_emb_size,
         dec_emb_size=decoder_emb_size,
         enc_units=encoder_units,
         dec_units=decoder_units)
     loss_fn = nn.CrossEntropyLoss()
-    opt = optim.Adam(transformer.parameters())
+    opt = optim.Adam(transformer.parameters(), lr=learning_rate)
     lr_decay = StepLR(opt, step_size=decay_step, gamma=decay_percent)
 
     if torch.cuda.is_available():
@@ -71,7 +68,8 @@ def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
 
         softmaxed_predictions, predictions = transformer(batch.src, batch.trg)
 
-        flattened_predictions = predictions.view(-1, decoder_units[-1])
+        flattened_predictions = predictions.view(
+            -1, len(target.vocab.itos))
         flattened_target = batch.trg.view(-1)
 
         loss = loss_fn(flattened_predictions, flattened_target)
@@ -79,13 +77,14 @@ def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
         loss.backward()
         opt.step()
 
-        return softmaxed_predictions, loss.data[0]
+        return softmaxed_predictions, loss.data[0], batch.trg
 
     def validation_inference_function(batch):
         transformer.eval()
         softmaxed_predictions, predictions = transformer(batch.src, batch.trg)
 
-        flattened_predictions = predictions.view(-1, decoder_units[-1])
+        flattened_predictions = predictions.view(
+            -1, len(target.vocab.itos))
         flattened_target = batch.trg.view(-1)
 
         loss = loss_fn(flattened_predictions, flattened_target)
@@ -103,7 +102,7 @@ def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
         metric_name="CrossEntropy",
         should_log=
         lambda trainer: trainer.current_iteration % log_interval == 0,
-        history_transform=lambda history: history[-1])
+        history_transform=lambda history: history[1])
     trainer.add_event_handler(
         TrainingEvents.TRAINING_ITERATION_COMPLETED,
         save_checkpoint_hook(transformer, model_dir),
@@ -111,7 +110,7 @@ def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
         lambda trainer: trainer.current_iteration % save_interval == 0)
     trainer.add_event_handler(
         TrainingEvents.TRAINING_ITERATION_COMPLETED,
-        print_current_prediction_hook(source.vocab),
+        print_current_prediction_hook(target.vocab),
         should_print=
         lambda trainer: trainer.current_iteration % compare_interval == 0)
     trainer.add_event_handler(
@@ -136,6 +135,8 @@ if __name__ == '__main__':
         help="Number of batch in single iteration")
     PARSER.add_argument(
         "--epochs", type=int, default=10000, help="Number of epochs")
+    PARSER.add_argument(
+        "--learning_rate", type=float, default=1e-4, help="Learning rate size")
     PARSER.add_argument(
         "--enc_max_vocab",
         type=int,
@@ -209,6 +210,7 @@ if __name__ == '__main__':
         decoder_units=DECODER_UNITS,
         batch_size=ARGS.batch_size,
         epochs=ARGS.epochs,
+        learning_rate=ARGS.learning_rate,
         decay_step=ARGS.decay_step,
         decay_percent=ARGS.decay_percent,
         log_interval=ARGS.log_interval,

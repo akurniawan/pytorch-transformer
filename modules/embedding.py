@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
 
@@ -12,12 +13,14 @@ class TransformerEmbedding(nn.Module):
                  vocab_size,
                  max_length,
                  embedding_size,
+                 padding_idx,
                  use_positional_embedding=True):
         super(TransformerEmbedding, self).__init__()
         self._use_positional_embedding = use_positional_embedding
 
+        # add + 3 for pad, unk and eos/bos
         self.word_embedding = nn.Embedding(
-            vocab_size, embedding_size, padding_idx=0)
+            vocab_size + 3, embedding_size, padding_idx=padding_idx)
 
         if use_positional_embedding:
             self.pos_embedding = nn.Embedding(max_length, embedding_size)
@@ -42,7 +45,10 @@ class TransformerEmbedding(nn.Module):
     def forward(self, X):
         word_embedding = self.word_embedding(X)
         if self._use_positional_embedding:
-            pos_embedding = self.pos_embedding(X)
+            T = X.size(1)
+            pos = Variable(
+                torch.arange(T).expand(X.size()).long(), requires_grad=False)
+            pos_embedding = self.pos_embedding(pos)
             word_embedding += pos_embedding
 
         return word_embedding
