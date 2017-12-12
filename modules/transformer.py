@@ -23,7 +23,8 @@ class Transformer(nn.Module):
         self.decoder = TransformerDecoder(dec_emb_size, enc_emb_size,
                                           dec_units)
 
-        self.output_layer = nn.Linear(in_features=enc_units[-1], out_features=dec_vocab_size)
+        self.output_layer = nn.Linear(
+            in_features=enc_units[-1], out_features=dec_vocab_size)
         self.softmax = nn.Softmax(dim=2)
 
     def forward(self, enc_input, dec_input):

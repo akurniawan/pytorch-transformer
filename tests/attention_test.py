@@ -5,9 +5,13 @@ import torch
 import torch.nn as nn
 
 from torch.autograd import Variable
+from hypothesis import given
+from hypothesis.extra.numpy import arrays
+from hypothesis.strategies import integers, floats
 
-from attention import (BahdanauAttention, LuongAttention, MultiHeadAttention)
-from attention import DynamicBatchNormalization
+from modules.attention import (BahdanauAttention, LuongAttention,
+                               MultiHeadAttention)
+from modules.attention import DynamicBatchNormalization
 
 
 class AttentionTest(unittest.TestCase):
@@ -96,13 +100,30 @@ class AttentionTest(unittest.TestCase):
         self.assertEqual(context.size(), self.context_size)
         self.assertEqual(alignment_score.size(), self.alignment_size)
 
-    def test_multi_head_attention(self):
+    @given(
+        arrays(
+            dtype=np.float32, shape=(16, 70, 512), elements=floats(-10, 10)))
+    def test_multi_head_attention(self, xs):
+        _keys = Variable(torch.from_numpy(xs))
+        num_units = 512
         mh_attention = MultiHeadAttention(
-            query_dim=self.keys.size(2),
-            key_dim=self.keys.size(2),
-            num_units=512)
+            query_dim=_keys.size(2), key_dim=_keys.size(2), num_units=num_units)
 
-        keys = torch.cat([self.keys, Variable(torch.zeros(3, 15, 512))], dim=1)
+        count_vars = 0
+        for params in mh_attention.parameters():
+            if len(params.size()) == 2:
+                self.assertEqual(params.size(0), num_units)
+                self.assertEqual(params.size(1), num_units)
+                self.assertEqual(params.size(0), params.size(1))
+            else:
+                self.assertEqual(params.size(0), num_units)
+            count_vars += 1
+        self.assertEqual(count_vars, 5)
+
+        batch_size = _keys.size(0)
+        num_units = _keys.size(2)
+        keys = torch.cat(
+            [_keys, Variable(torch.zeros(batch_size, 1, num_units))], dim=1)
         attention_result = mh_attention(keys, keys)
 
         self.assertEqual(attention_result.size(), keys.size())

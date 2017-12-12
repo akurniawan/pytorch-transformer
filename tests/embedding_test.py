@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from torch.autograd import Variable
-from embedding import TransformerEmbedding
+from modules.embedding import TransformerEmbedding
 
 
 class TransformerEmbeddingTest(unittest.TestCase):

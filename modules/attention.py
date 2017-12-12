@@ -193,11 +193,11 @@ class MultiHeadAttention(nn.Module):
         super(MultiHeadAttention, self).__init__()
 
         if query_dim != key_dim:
-            raise ValueError("query_dim and key_dim are not the same")
+            raise ValueError("query_dim and key_dim must be the same")
         if num_units % h != 0:
             raise ValueError("num_units must be dividable by h")
         if query_dim != num_units:
-            raise ValueError("To employ residual connection, the number of "
+            raise ValueError("to employ residual connection, the number of "
                              "query_dim and num_units must be the same")
 
         self._num_units = num_units
@@ -209,7 +209,7 @@ class MultiHeadAttention(nn.Module):
         self.query_layer = nn.Linear(query_dim, num_units, bias=False)
         self.key_layer = nn.Linear(key_dim, num_units, bias=False)
         self.value_layer = nn.Linear(key_dim, num_units, bias=False)
-        self.bn = DynamicBatchNormalization(num_units)
+        self.bn = nn.BatchNorm1d(num_units)
 
     def forward(self, query, keys):
         Q = self.query_layer(query)
@@ -258,6 +258,6 @@ class MultiHeadAttention(nn.Module):
         # residual connection
         attention += query
         # apply batch normalization
-        attention = self.bn(attention)
+        attention = self.bn(attention.transpose(1, 2)).transpose(1, 2)
 
         return attention

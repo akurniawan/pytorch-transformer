@@ -22,7 +22,7 @@ class PositionWiseFFN(nn.Module):
         # the same for residual network
         assert X.size(-1) == self.ffn[-1].bias.size(-1)
         ffn = self.ffn(X)
-
         # residual network
         ffn += X
+
         return ffn

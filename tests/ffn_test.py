@@ -2,7 +2,7 @@ import unittest
 import torch
 
 from torch.autograd import Variable
-from ffn import PositionWiseFFN
+from modules.ffn import PositionWiseFFN
 
 class PositionWiseFFNTest(unittest.TestCase):
     def test_ffn(self):
