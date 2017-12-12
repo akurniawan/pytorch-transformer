@@ -17,13 +17,22 @@ from ignite.handlers.logging import log_validation_simple_moving_average
 from modules.transformer import Transformer
 
 
-def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
-         batch_size, epochs, decay_step, decay_percent, log_interval,
-         save_interval, model_path):
+def run(model_path,
+        encoder_emb_size,
+        decoder_emb_size,
+        encoder_units,
+        decoder_units,
+        batch_size,
+        epochs,
+        decay_step,
+        decay_percent,
+        log_interval,
+        save_interval,
+        compare_interval=2):
     de = data.Field(batch_first=True)
     en = data.Field(batch_first=True)
 
-    train, val, test = datasets.WMT14.splits(
+    train, val, _ = datasets.WMT14.splits(
         exts=(".de", ".en"),
         root="./",
         fields=(de, en),
@@ -34,9 +43,14 @@ def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
     de.build_vocab(train.trg, min_freq=3, max_size=80000)
     en.build_vocab(train.src, min_freq=3, max_size=80000)
 
-    transformer = Transformer(100, len(en.vocab.freqs), len(
-        de.vocab.freqs), encoder_emb_size, decoder_emb_size, encoder_units,
-                              decoder_units)
+    transformer = Transformer(
+        max_length=100,
+        enc_vocab_size=len(en.vocab.freqs),
+        dec_vocab_size=len(de.vocab.freqs),
+        enc_emb_size=encoder_emb_size,
+        dec_emb_size=decoder_emb_size,
+        enc_units=encoder_units,
+        dec_units=decoder_units)
     loss_fn = nn.CrossEntropyLoss()
     opt = optim.Adam(transformer.parameters())
     lr_decay = StepLR(opt, step_size=decay_step, gamma=decay_percent)
@@ -48,8 +62,8 @@ def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
     else:
         device_data = -1
 
-    train_iter, val_iter, test_iter = data.BucketIterator.splits(
-        (train, val, test),
+    train_iter, val_iter = data.BucketIterator.splits(
+        (train, val),
         batch_size=batch_size,
         repeat=False,
         shuffle=True,
@@ -70,7 +84,7 @@ def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
         loss.backward()
         opt.step()
 
-        return loss.data[0]
+        return predictions, loss.data[0]
 
     def validation_inference_function(batch):
         transformer.eval()
@@ -92,13 +106,19 @@ def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
         log_training_simple_moving_average,
         window_size=10,
         metric_name="CrossEntropy",
-        should_log=lambda trainer: trainer.current_iteration % log_interval == 0
-    )
+        should_log=
+        lambda trainer: trainer.current_iteration % log_interval == 0,
+        history_transform=lambda history: history[-1])
     trainer.add_event_handler(
         TrainingEvents.TRAINING_ITERATION_COMPLETED,
         save_checkpoint_hook(transformer, model_path),
         should_save=
         lambda trainer: trainer.current_iteration % save_interval == 0)
+    trainer.add_event_handler(
+        TrainingEvents.TRAINING_ITERATION_COMPLETED,
+        print_current_prediction_hook(en.vocab),
+        should_print=
+        lambda trainer: trainer.current_iteration % compare_interval == 0)
     trainer.add_event_handler(
         TrainingEvents.VALIDATION_COMPLETED,
         log_validation_simple_moving_average,
@@ -112,7 +132,7 @@ def main(encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
 
 
 if __name__ == '__main__':
-    main(
+    run(model_path="./transformer-cp.pt",
         encoder_emb_size=512,
         decoder_emb_size=512,
         encoder_units=[512] * 6,
@@ -122,5 +142,4 @@ if __name__ == '__main__':
         decay_step=100,
         decay_percent=0.1,
         log_interval=2,
-        save_interval=10,
-        model_path="./transformer-cp.pt")
+        save_interval=5)

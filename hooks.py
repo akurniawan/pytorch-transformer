@@ -30,3 +30,14 @@ def restore_checkpoint_hook(model, model_path, logger=print):
             logger("Something wrong while restoring the model: %s" % str(e))
 
     return restore_checkpoint
+
+
+def print_current_prediction_hook(vocab, logger=print):
+    def print_current_condition(trainer, should_print):
+        if should_print(trainer):
+            last_hist = trainer.training_history[-1][0]
+            for hist in last_hist:
+                _, idx = hist.max(1)
+                print(idx.data.numpy())
+
+    return print_current_condition
