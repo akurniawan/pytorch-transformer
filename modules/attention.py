@@ -4,8 +4,6 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
-from modules.bn import DynamicBatchNormalization
-
 
 class BahdanauAttention(nn.Module):
     def __init__(self, num_units, query_size, memory_size):
