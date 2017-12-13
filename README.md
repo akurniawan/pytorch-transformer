@@ -63,9 +63,8 @@ python train.py --batch_size 3 --source_train_path wmt14/train.en --target_train
 ```
 
 ## Results
-I haven't had a chance to fully run this code over the whole WMT data, I only tested it using 100 training data. The result, however, is pretty exciting remembering we are not using neither CNN or RNN! Below I present the result after several epochs of training.
-
-====================================================================================================
+I haven't had a chance to fully run this code over the whole WMT data, I only tested it using 100 training data. The result, however, is pretty exciting remembering we are not using neither CNN or RNN! Below I present the result after several epochs of training. The results are consist of two rows each, where the former is the prediction and the later is the target
+```
 arbeitsp@@ lan <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
 arbeitsp@@ lan <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
 
@@ -104,5 +103,5 @@ es gab eine abstimmung zu diesem punkt . <eos> <pad> <pad> <pad> <pad> <pad> <pa
 
 der kollege hän@@ sch hat sie dort vertreten . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
 der kollege hän@@ sch hat sie dort vertreten . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-====================================================================================================
+```
 The result below are from training data and not validation data. The loss still embarassing and I will try to improve it little by little since I don't have GPU to train the model. Will keep you guys posted!
