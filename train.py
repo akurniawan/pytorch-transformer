@@ -8,37 +8,27 @@ import torch.optim as optim
 from hooks import *
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
-from torchtext import data
-from torchtext import datasets
 from ignite.trainer import Trainer, TrainingEvents
 from ignite.handlers.logging import log_training_simple_moving_average
 from ignite.handlers.logging import log_validation_simple_moving_average
 
 from modules.transformer import Transformer
+from data import create_dataset
 
 
-def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
-        decoder_emb_size, encoder_units, decoder_units, batch_size, epochs,
-        learning_rate, decay_step, decay_percent, log_interval, save_interval,
-        compare_interval):
-    source = data.Field(batch_first=True, lower=True, init_token="<bos>")
-    target = data.Field(batch_first=True, lower=True, eos_token="<eos>")
+def run(model_dir, max_len, source_train_path, target_train_path,
+        source_val_path, target_val_path, enc_max_vocab, dec_max_vocab,
+        encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
+        batch_size, epochs, learning_rate, decay_step, decay_percent,
+        log_interval, save_interval, compare_interval):
 
-    train, val, _ = datasets.WMT14.splits(
-        exts=(".en", ".de"),
-        root="./",
-        fields=(source, target),
-        train="train",
-        validation="eval",
-        test="test")
-
-    source.build_vocab(train.src, min_freq=1, max_size=enc_max_vocab)
-    target.build_vocab(train.trg, min_freq=1, max_size=dec_max_vocab)
-
+    train_iter, val_iter, source_vocab, target_vocab = create_dataset(
+        batch_size, enc_max_vocab, dec_max_vocab, source_train_path,
+        target_train_path, source_val_path, target_val_path)
     transformer = Transformer(
-        max_length=100,
-        enc_vocab=source.vocab,
-        dec_vocab=target.vocab,
+        max_length=max_len,
+        enc_vocab=source_vocab,
+        dec_vocab=target_vocab,
         enc_emb_size=encoder_emb_size,
         dec_emb_size=decoder_emb_size,
         enc_units=encoder_units,
@@ -48,18 +38,8 @@ def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
     lr_decay = StepLR(opt, step_size=decay_step, gamma=decay_percent)
 
     if torch.cuda.is_available():
-        device_data = 0
         transformer.cuda()
         loss_fn.cuda()
-    else:
-        device_data = -1
-
-    train_iter, val_iter = data.BucketIterator.splits(
-        (train, val),
-        batch_size=batch_size,
-        repeat=False,
-        shuffle=True,
-        device=device_data)
 
     def training_update_function(batch):
         transformer.train()
@@ -68,8 +48,7 @@ def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
 
         softmaxed_predictions, predictions = transformer(batch.src, batch.trg)
 
-        flattened_predictions = predictions.view(
-            -1, len(target.vocab.itos))
+        flattened_predictions = predictions.view(-1, len(target_vocab.itos))
         flattened_target = batch.trg.view(-1)
 
         loss = loss_fn(flattened_predictions, flattened_target)
@@ -83,8 +62,7 @@ def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
         transformer.eval()
         softmaxed_predictions, predictions = transformer(batch.src, batch.trg)
 
-        flattened_predictions = predictions.view(
-            -1, len(target.vocab.itos))
+        flattened_predictions = predictions.view(-1, len(target_vocab.itos))
         flattened_target = batch.trg.view(-1)
 
         loss = loss_fn(flattened_predictions, flattened_target)
@@ -110,7 +88,7 @@ def run(model_dir, enc_max_vocab, dec_max_vocab, encoder_emb_size,
         lambda trainer: trainer.current_iteration % save_interval == 0)
     trainer.add_event_handler(
         TrainingEvents.TRAINING_ITERATION_COMPLETED,
-        print_current_prediction_hook(target.vocab),
+        print_current_prediction_hook(target_vocab),
         should_print=
         lambda trainer: trainer.current_iteration % compare_interval == 0)
     trainer.add_event_handler(
@@ -134,9 +112,30 @@ if __name__ == '__main__':
         default=2,
         help="Number of batch in single iteration")
     PARSER.add_argument(
+        "--source_train_path",
+        default=None,
+        help="Path for source training data. Ex: data/train.en")
+    PARSER.add_argument(
+        "--target_train_path",
+        default=None,
+        help="Path for target training data. Ex: data/train.de")
+    PARSER.add_argument(
+        "--source_val_path",
+        default=None,
+        help="Path for source validation data. Ex: data/val.en")
+    PARSER.add_argument(
+        "--target_val_path",
+        default=None,
+        help="Path for target validation data. Ex: data/val.de")
+    PARSER.add_argument(
         "--epochs", type=int, default=10000, help="Number of epochs")
     PARSER.add_argument(
         "--learning_rate", type=float, default=1e-4, help="Learning rate size")
+    PARSER.add_argument(
+        "--max_len",
+        type=int,
+        default=100,
+        help="Maximum allowed sentence length")
     PARSER.add_argument(
         "--enc_max_vocab",
         type=int,
@@ -202,6 +201,11 @@ if __name__ == '__main__':
     DECODER_UNITS = [int(unit) for unit in ARGS.decoder_units.split(",")]
 
     run(model_dir=ARGS.model_dir,
+        max_len=ARGS.max_len,
+        source_train_path=ARGS.source_train_path,
+        target_train_path=ARGS.target_train_path,
+        source_val_path=ARGS.source_val_path,
+        target_val_path=ARGS.target_val_path,
         enc_max_vocab=ARGS.enc_max_vocab,
         dec_max_vocab=ARGS.dec_max_vocab,
         encoder_emb_size=ARGS.encoder_emb_size,

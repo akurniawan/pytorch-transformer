@@ -52,3 +52,19 @@ class TransformerEmbedding(nn.Module):
             word_embedding += pos_embedding
 
         return word_embedding
+
+
+class OneHotEmbedding(nn.Module):
+    def __init__(self, num_class):
+        super(OneHotEmbedding, self).__init__()
+        self.embed = nn.Embedding(num_class, num_class)
+        self.embed.weight.data = self._build_onehot(num_class)
+        # to prevent the weight getting trained
+        self.embed.weight.requires_grad = False
+
+    def _build_onehot(self, num_class):
+        onehot = torch.eye(num_class)
+        return onehot
+
+    def forward(self, x):
+        return self.embed(x)
