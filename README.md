@@ -64,7 +64,7 @@ python train.py --batch_size 3 --source_train_path wmt14/train.en --target_train
 
 ## Results
 I haven't had a chance to fully run this code over the whole WMT data, I only tested it using 100 training data. The result, however, is pretty exciting remembering we are not using neither CNN or RNN! Below I present the result after several epochs of training.
-Current state of the model
+
 ====================================================================================================
 arbeitsp@@ lan <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
 arbeitsp@@ lan <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
