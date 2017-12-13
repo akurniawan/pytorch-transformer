@@ -1,5 +1,10 @@
 # pytorch-transformer
-Implementation of "Attention is All You Need" paper with PyTorch
+Implementation of "Attention is All You Need" paper with PyTorch.
+Installed components are:
+1. Multi-Head Attention
+2. Positional Encoding with sinusodial
+3. Position Wise FFN
+4. Label Smoothing (unfortunately still can't use this because PyTorch has no support for loss calculation with logits yet :( )
 
 ## Requirements
 * [pytorch](http://pytorch.org/)
@@ -7,6 +12,11 @@ Implementation of "Attention is All You Need" paper with PyTorch
 * [ignite](https://github.com/pytorch/ignite/)
 
 ## How to use?
+### Training
+You can run the training with simply `python train.py`. If you want to add other arguments. Please see the example below
+```
+python train.py --batch_size 3 --source_train_path wmt14/train.en --target_train_path wmt14/train.de --source_val_path wmt14/eval.en --target_val_path wmt14/eval.de
+```
 ### Arguments
 ```
   --batch_size BATCH_SIZE
