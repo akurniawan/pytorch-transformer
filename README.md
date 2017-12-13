@@ -62,4 +62,47 @@ python train.py --batch_size 3 --source_train_path wmt14/train.en --target_train
                         Location to save the model
 ```
 
-Still Work in Progress
+## Results
+I haven't had a chance to fully run this code over the whole WMT data, I only tested it using 100 training data. The result, however, is pretty exciting remembering we are not using neither CNN or RNN! Below I present the result after several epochs of training.
+Current state of the model
+====================================================================================================
+arbeitsp@@ lan <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+arbeitsp@@ lan <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+zum mittwoch : <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+zum mittwoch : <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+wiederaufnahme der sitzungsperiode <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+wiederaufnahme der sitzungsperiode <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+das war der beschluß . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+das war der beschluß . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+( beifall der pse-fraktion ) <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+( beifall der pse-fraktion ) <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+warum finden keine brand@@ schutz@@ bel@@ ehr@@ ungen statt ? <eos> <pad> <pad> <pad> <pad> <pad> <pad>
+warum finden keine brand@@ schutz@@ bel@@ ehr@@ ungen statt ? <eos> <pad> <pad> <pad> <pad> <pad> <pad>
+
+wir haben dann abgestimmt . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+wir haben dann abgestimmt . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+wir wissen nicht , was passiert . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+wir wissen nicht , was passiert . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+frau präsidentin , zur geschäftsordnung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+frau präsidentin , zur geschäftsordnung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+frau präsidentin , zur geschäftsordnung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+frau präsidentin , zur geschäftsordnung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+alle anderen waren anderer meinung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+alle anderen waren anderer meinung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+es gab eine abstimmung zu diesem punkt . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+es gab eine abstimmung zu diesem punkt . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+der kollege hän@@ sch hat sie dort vertreten . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+der kollege hän@@ sch hat sie dort vertreten . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+====================================================================================================
+The result below are from training data and not validation data. The loss still embarassing and I will try to improve it little by little since I don't have GPU to train the model. Will keep you guys posted!
