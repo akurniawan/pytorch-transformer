@@ -56,7 +56,7 @@ def run(model_dir, max_len, source_train_path, target_train_path,
         loss.backward()
         opt.step()
 
-        return softmaxed_predictions, loss.data[0], batch.trg
+        return softmaxed_predictions.data, loss.data[0], batch.trg.data
 
     def validation_inference_function(batch):
         transformer.eval()

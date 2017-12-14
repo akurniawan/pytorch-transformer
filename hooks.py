@@ -46,8 +46,8 @@ def print_current_prediction_hook(vocab, logger=print):
                 _, idx = pred.max(1)
                 preds = []
                 trgs = []
-                for pred_idx, trg_idx in zip(idx.data.numpy(),
-                                             trg.data.numpy()):
+                for pred_idx, trg_idx in zip(idx.numpy(),
+                                             trg.numpy()):
                     preds.append(vocab.itos[pred_idx])
                     trgs.append(vocab.itos[trg_idx])
                 result_str += (" ".join(preds)) + "\n"
