@@ -1,10 +1,9 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from modules.decoder import TransformerDecoder
 from modules.embedding import TransformerEmbedding
 from modules.encoder import TransformerEncoder
-from modules.decoder import TransformerDecoder
 
 
 class Transformer(nn.Module):

@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
-from torch.nn.parameter import Parameter
 
 
 class BahdanauAttention(nn.Module):
@@ -200,7 +198,8 @@ class MultiHeadAttention(nn.Module):
 
         self._num_units = num_units
         self._h = h
-        self._key_dim = Variable(torch.FloatTensor([key_dim]))
+        self._key_dim = torch.tensor(
+            data=[key_dim], requires_grad=True, dtype=torch.float32)
         self._dropout_p = dropout_p
         self._is_masked = is_masked
 
@@ -232,17 +231,13 @@ class MultiHeadAttention(nn.Module):
             diag_vals = attention[0].sign().abs()
             diag_mat = diag_vals.tril()
             diag_mat = diag_mat.unsqueeze(0).expand(attention.size())
-            # we need to enforce converting mask to Variable, since
-            # in pytorch we can't do operation between Tensor and
-            # Variable
-            mask = Variable(
-                torch.ones(diag_mat.size()) * (-2**32 + 1), requires_grad=False)
+            mask = torch.ones(diag_mat.size()) * (-2**32 + 1)
             # this is some trick that I use to combine the lower diagonal
             # matrix and its masking. (diag_mat-1).abs() will reverse the value
             # inside diag_mat, from 0 to 1 and 1 to zero. with this
             # we don't need loop operation andn could perform our calculation
             # faster
-            attention = (attention * diag_mat) + (mask * (diag_mat-1).abs())
+            attention = (attention * diag_mat) + (mask * (diag_mat - 1).abs())
         # put it to softmax
         attention = F.softmax(attention, dim=-1)
         # apply dropout

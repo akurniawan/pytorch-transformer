@@ -2,9 +2,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 
 
@@ -46,8 +44,7 @@ class TransformerEmbedding(nn.Module):
         word_embedding = self.word_embedding(X)
         if self._use_positional_embedding:
             T = X.size(1)
-            pos = Variable(
-                torch.arange(T).expand(X.size()).long(), requires_grad=False)
+            pos = torch.arange(T).expand(X.size()).long()
             pos_embedding = self.pos_embedding(pos)
             word_embedding += pos_embedding
 

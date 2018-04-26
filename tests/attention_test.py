@@ -2,16 +2,12 @@ import unittest
 
 import numpy as np
 import torch
-import torch.nn as nn
-
-from torch.autograd import Variable
 from hypothesis import given
 from hypothesis.extra.numpy import arrays
-from hypothesis.strategies import integers, floats
+from hypothesis.strategies import floats
 
 from modules.attention import (BahdanauAttention, LuongAttention,
                                MultiHeadAttention)
-from modules.attention import DynamicBatchNormalization
 
 
 class AttentionTest(unittest.TestCase):
@@ -24,10 +20,10 @@ class AttentionTest(unittest.TestCase):
         self.context_size = (keys_size[0], keys_size[2])
         self.alignment_size = (keys_size[0], keys_size[1])
 
-        self.query = Variable(
-            torch.from_numpy(np.random.randn(*query_size).astype(np.float32)))
-        self.keys = Variable(
-            torch.from_numpy(np.random.randn(*keys_size).astype(np.float32)))
+        self.query = torch.from_numpy(
+            np.random.randn(*query_size).astype(np.float32))
+        self.keys = torch.from_numpy(
+            np.random.randn(*keys_size).astype(np.float32))
 
     def test_bahdanau_attention(self):
         bahdanau_attention = BahdanauAttention(
@@ -46,8 +42,8 @@ class AttentionTest(unittest.TestCase):
             query_size=self.query.size(1),
             memory_size=self.keys.size(2),
             score_fn="dot")
-        sentence_lengths = Variable(
-            torch.FloatTensor([self.keys.size(1)] * self.keys.size(0)))
+        sentence_lengths = torch.FloatTensor(
+            [self.keys.size(1)] * self.keys.size(0))
         context, alignment_score = luong_attention(self.query, self.keys,
                                                    sentence_lengths)
 
@@ -61,8 +57,8 @@ class AttentionTest(unittest.TestCase):
             query_size=self.query.size(1),
             memory_size=self.keys.size(2),
             score_fn="general")
-        sentence_lengths = Variable(
-            torch.FloatTensor([self.keys.size(1)] * self.keys.size(0)))
+        sentence_lengths = torch.FloatTensor(
+            [self.keys.size(1)] * self.keys.size(0))
         context, alignment_score = luong_attention(self.query, self.keys,
                                                    sentence_lengths)
 
@@ -76,8 +72,8 @@ class AttentionTest(unittest.TestCase):
             query_size=self.query.size(1),
             memory_size=self.keys.size(2),
             score_fn="concat")
-        sentence_lengths = Variable(
-            torch.FloatTensor([self.keys.size(1)] * self.keys.size(0)))
+        sentence_lengths = torch.FloatTensor(
+            [self.keys.size(1)] * self.keys.size(0))
         context, alignment_score = luong_attention(self.query, self.keys,
                                                    sentence_lengths)
 
@@ -92,8 +88,8 @@ class AttentionTest(unittest.TestCase):
             memory_size=self.keys.size(2),
             alignment="global",
             score_fn="dot")
-        sentence_lengths = Variable(
-            torch.FloatTensor([self.keys.size(1)] * self.keys.size(0)))
+        sentence_lengths = torch.FloatTensor(
+            [self.keys.size(1)] * self.keys.size(0))
         context, alignment_score = luong_attention(self.query, self.keys,
                                                    sentence_lengths)
 
@@ -104,10 +100,12 @@ class AttentionTest(unittest.TestCase):
         arrays(
             dtype=np.float32, shape=(16, 70, 512), elements=floats(-10, 10)))
     def test_multi_head_attention(self, xs):
-        _keys = Variable(torch.from_numpy(xs))
+        _keys = torch.from_numpy(xs)
         num_units = 512
         mh_attention = MultiHeadAttention(
-            query_dim=_keys.size(2), key_dim=_keys.size(2), num_units=num_units)
+            query_dim=_keys.size(2),
+            key_dim=_keys.size(2),
+            num_units=num_units)
 
         count_vars = 0
         for params in mh_attention.parameters():
@@ -122,8 +120,7 @@ class AttentionTest(unittest.TestCase):
 
         batch_size = _keys.size(0)
         num_units = _keys.size(2)
-        keys = torch.cat(
-            [_keys, Variable(torch.zeros(batch_size, 1, num_units))], dim=1)
+        keys = torch.cat([_keys, torch.zeros(batch_size, 1, num_units)], dim=1)
         attention_result = mh_attention(keys, keys)
 
         self.assertEqual(attention_result.size(), keys.size())
