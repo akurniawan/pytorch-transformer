@@ -3,17 +3,25 @@ import torch
 from pathlib import Path
 
 
-def save_checkpoint_hook(model, model_path, logger=print):
-    def save_checkpoint(trainer, should_save):
-        if should_save(trainer):
-            try:
-                logger("Saving model...")
-                torch.save(model.state_dict(), model_path)
-                logger("Finish saving model!")
-            except Exception as e:
-                logger("Something wrong while saving the model: %s" % str(e))
+def print_logs_hook(print_freq, max_epochs, total_data):
+    def print_logs(engine):
+        if (engine.state.iteration - 1) % print_freq == 0:
+            columns = engine.state.metrics.keys()
+            values = [
+                str(round(float(value), 5))
+                for value in engine.state.metrics.values()
+            ]
+            message = '[{epoch}/{max_epoch}][{i}/{max_i}]'.format(
+                epoch=engine.state.epoch,
+                max_epoch=max_epochs,
+                i=(engine.state.iteration % total_data),
+                max_i=total_data)
+            for name, value in zip(columns, values):
+                message += ' | {name}: {value}'.format(name=name, value=value)
 
-    return save_checkpoint
+            print(message)
+
+    return print_logs
 
 
 def restore_checkpoint_hook(model, model_path, logger=print):
@@ -32,22 +40,21 @@ def restore_checkpoint_hook(model, model_path, logger=print):
     return restore_checkpoint
 
 
-def print_current_prediction_hook(vocab, logger=print):
-    def print_current_condition(trainer, should_print):
-        if should_print(trainer):
+def print_current_prediction_hook(vocab, interval, logger=print):
+    def print_current_condition(engine):
+        if engine.state.iteration % interval == 0:
             result_str = ""
             result_str += "Current state of the model\n"
             result_str += ("=" * 100) + "\n"
-            pred_last_hist = trainer.training_history[-1][0]
-            trg_last_hist = trainer.training_history[-1][-1]
+            pred_last_hist = engine.state.output[0]
+            trg_last_hist = engine.state.output[-1]
             batch_size = pred_last_hist.size(0)
             for this_idx, (pred, trg) in enumerate(
                     zip(pred_last_hist, trg_last_hist)):
                 _, idx = pred.max(1)
                 preds = []
                 trgs = []
-                for pred_idx, trg_idx in zip(idx.numpy(),
-                                             trg.numpy()):
+                for pred_idx, trg_idx in zip(idx.numpy(), trg.numpy()):
                     preds.append(vocab.itos[pred_idx])
                     trgs.append(vocab.itos[trg_idx])
                 result_str += (" ".join(preds)) + "\n"
