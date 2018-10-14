@@ -1,0 +1,5 @@
+git+https://github.com/pytorch/ignite
+torch
+numpy==1.15.2
+torchtext==0.3.1
+six==1.11.0
