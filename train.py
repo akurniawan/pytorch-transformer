@@ -8,9 +8,9 @@ import torch.optim as optim
 from hooks import *
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
-from ignite.trainer import Trainer, TrainingEvents
-from ignite.handlers.logging import log_training_simple_moving_average
-from ignite.handlers.logging import log_validation_simple_moving_average
+from ignite.engine import Events, Engine
+from ignite.metrics import RunningAverage
+from ignite.handlers.checkpoint import ModelCheckpoint
 
 from modules.transformer import Transformer
 from data import create_dataset
@@ -41,7 +41,7 @@ def run(model_dir, max_len, source_train_path, target_train_path,
         transformer.cuda()
         loss_fn.cuda()
 
-    def training_update_function(batch):
+    def training_step(engine, batch):
         transformer.train()
         lr_decay.step()
         opt.zero_grad()
@@ -56,51 +56,63 @@ def run(model_dir, max_len, source_train_path, target_train_path,
         loss.backward()
         opt.step()
 
-        return softmaxed_predictions.data, loss.data[0], batch.trg.data
+        return softmaxed_predictions.data, loss.item(), batch.trg.data
 
-    def validation_inference_function(batch):
+    def validation_step(engine, batch):
         transformer.eval()
-        softmaxed_predictions, predictions = transformer(batch.src, batch.trg)
+        with torch.no_grad():
+            softmaxed_predictions, predictions = transformer(
+                batch.src, batch.trg)
 
-        flattened_predictions = predictions.view(-1, len(target_vocab.itos))
-        flattened_target = batch.trg.view(-1)
+            flattened_predictions = predictions.view(-1,
+                                                     len(target_vocab.itos))
+            flattened_target = batch.trg.view(-1)
 
-        loss = loss_fn(flattened_predictions, flattened_target)
+            loss = loss_fn(flattened_predictions, flattened_target)
 
-        return loss.data[0]
+            return loss.item()
 
-    trainer = Trainer(train_iter, training_update_function, val_iter,
-                      validation_inference_function)
-    trainer.add_event_handler(TrainingEvents.TRAINING_STARTED,
-                              restore_checkpoint_hook(transformer, model_dir))
+    trainer = Engine(training_step)
+    evaluator = Engine(validation_step)
+    checkpoint_handler = ModelCheckpoint(
+        model_dir,
+        "Transformer",
+        save_interval=ARGS.save_interval,
+        n_saved=10,
+        require_empty=False)
+
+    # Attach training metrics
+    RunningAverage(output_transform=lambda x: x[1]).attach(
+        trainer, "train_loss")
+    # Attach validation metrics
+    RunningAverage(output_transform=lambda x: x).attach(evaluator, "val_loss")
+
+    # trainer.add_event_handler(Events.TRAINING_STARTED,
+    #                           restore_checkpoint_hook(transformer, model_dir))
     trainer.add_event_handler(
-        TrainingEvents.TRAINING_ITERATION_COMPLETED,
-        log_training_simple_moving_average,
-        window_size=10,
-        metric_name="CrossEntropy",
-        should_log=
-        lambda trainer: trainer.current_iteration % log_interval == 0,
-        history_transform=lambda history: history[1])
+        Events.EPOCH_COMPLETED,
+        handler=validation_result_hook(evaluator, val_iter))
     trainer.add_event_handler(
-        TrainingEvents.TRAINING_ITERATION_COMPLETED,
-        save_checkpoint_hook(transformer, model_dir),
-        should_save=
-        lambda trainer: trainer.current_iteration % save_interval == 0)
+        Events.ITERATION_COMPLETED,
+        handler=print_logs_hook(
+            print_freq=ARGS.log_interval,
+            max_epochs=epochs,
+            total_data=len(train_iter)))
     trainer.add_event_handler(
-        TrainingEvents.TRAINING_ITERATION_COMPLETED,
-        print_current_prediction_hook(target_vocab),
-        should_print=
-        lambda trainer: trainer.current_iteration % compare_interval == 0)
+        Events.ITERATION_COMPLETED,
+        handler=print_current_prediction_hook(
+            target_vocab, interval=ARGS.compare_interval))
     trainer.add_event_handler(
-        TrainingEvents.VALIDATION_COMPLETED,
-        log_validation_simple_moving_average,
-        window_size=10,
-        metric_name="CrossEntropy")
-    trainer.add_event_handler(
-        TrainingEvents.TRAINING_COMPLETED,
-        save_checkpoint_hook(transformer, model_dir),
-        should_save=lambda trainer: True)
-    trainer.run(max_epochs=epochs, validate_every_epoch=True)
+        event_name=Events.ITERATION_COMPLETED,
+        handler=checkpoint_handler,
+        to_save={
+            "transformer": transformer,
+            "opt": opt,
+            "lr_decay": lr_decay
+        })
+
+    # Run the prediction
+    trainer.run(train_iter, max_epochs=epochs)
 
 
 if __name__ == '__main__':
@@ -193,7 +205,7 @@ if __name__ == '__main__':
     PARSER.add_argument(
         "--model_dir",
         type=str,
-        default="./transformer-cp.pt",
+        default="./checkpoints",
         help="Location to save the model")
     ARGS = PARSER.parse_args()
 
