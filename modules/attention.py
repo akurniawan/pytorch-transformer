@@ -151,8 +151,8 @@ class LuongAttention(nn.Module):
             alignment_point_dist = (
                 extended_key_lengths - predictive_alignment).pow(2)
 
-            alignment_point_dist = (-(alignment_point_dist /
-                                      (2 * std[0]))).exp()
+            alignment_point_dist = (
+                -(alignment_point_dist / (2 * std[0]))).exp()
             weight = weight * alignment_point_dist
 
             contexts = []
@@ -199,7 +199,7 @@ class MultiHeadAttention(nn.Module):
         self._num_units = num_units
         self._h = h
         self._key_dim = torch.tensor(
-            data=[key_dim], requires_grad=True, dtype=torch.float32)
+            data=[key_dim], requires_grad=False, dtype=torch.float32)
         self._dropout_p = dropout_p
         self._is_masked = is_masked
 
