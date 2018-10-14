@@ -3,6 +3,16 @@ import torch
 from pathlib import Path
 
 
+def validation_result_hook(evaluator, loader):
+    def validation_result(engine):
+        evaluator.run(loader)
+        metrics = evaluator.state.metrics
+        avg_loss = metrics["val_loss"]
+        print("Validation loss: ", avg_loss)
+
+    return validation_result
+
+
 def print_logs_hook(print_freq, max_epochs, total_data):
     def print_logs(engine):
         if (engine.state.iteration - 1) % print_freq == 0:
@@ -25,7 +35,7 @@ def print_logs_hook(print_freq, max_epochs, total_data):
 
 
 def restore_checkpoint_hook(model, model_path, logger=print):
-    def restore_checkpoint(trainer):
+    def restore_checkpoint(engine):
         try:
             model_file = Path(model_path)
             if model_file.exists():
