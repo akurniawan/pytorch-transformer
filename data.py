@@ -74,11 +74,6 @@ def get_wmt_dataset(exts, fields):
 
 def get_mt_datasets(exts, fields, train_path, val_path, test_path=""):
     train = datasets.TranslationDataset(
-        path=train_path,
-        exts=exts,
-        fields=fields)
-    val = datasets.TranslationDataset(
-        path=val_path,
-        exts=exts,
-        fields=fields)
+        path=train_path, exts=exts, fields=fields)
+    val = datasets.TranslationDataset(path=val_path, exts=exts, fields=fields)
     return train, val, None
