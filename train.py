@@ -1,16 +1,15 @@
 import argparse
-import multiprocessing
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 from hooks import *
 from torch.optim.lr_scheduler import StepLR
-from torch.utils.data import DataLoader
 from ignite.engine import Events, Engine
 from ignite.metrics import RunningAverage
-from ignite.handlers.checkpoint import ModelCheckpoint
+from ignite.handlers import Timer
+from ignite.handlers import ModelCheckpoint
+from ignite.contrib.handlers import ProgressBar
 
 from modules.transformer import Transformer
 from data import create_dataset
@@ -81,34 +80,39 @@ def run(model_dir, max_len, source_train_path, target_train_path,
         n_saved=10,
         require_empty=False)
 
+    timer = Timer(average=True)
+    timer.attach(
+        trainer,
+        start=Events.EPOCH_STARTED,
+        resume=Events.ITERATION_STARTED,
+        pause=Events.ITERATION_COMPLETED,
+        step=Events.ITERATION_COMPLETED)
+
     # Attach training metrics
     RunningAverage(output_transform=lambda x: x[1]).attach(
         trainer, "train_loss")
     # Attach validation metrics
     RunningAverage(output_transform=lambda x: x).attach(evaluator, "val_loss")
 
+    pbar = ProgressBar()
+    pbar.attach(trainer, ["train_loss"])
+    pbar.attach(evaluator, ["val_loss"])
+
     # trainer.add_event_handler(Events.TRAINING_STARTED,
     #                           restore_checkpoint_hook(transformer, model_dir))
     trainer.add_event_handler(
         Events.EPOCH_COMPLETED,
         handler=validation_result_hook(evaluator, val_iter))
-    trainer.add_event_handler(
-        Events.ITERATION_COMPLETED,
-        handler=print_logs_hook(
-            print_freq=ARGS.log_interval,
-            max_epochs=epochs,
-            total_data=len(train_iter)))
-    trainer.add_event_handler(
-        Events.ITERATION_COMPLETED,
-        handler=print_current_prediction_hook(
-            target_vocab, interval=ARGS.compare_interval))
+
     trainer.add_event_handler(
         event_name=Events.ITERATION_COMPLETED,
         handler=checkpoint_handler,
         to_save={
-            "transformer": transformer,
-            "opt": opt,
-            "lr_decay": lr_decay
+            "nmt": {
+                "transformer": transformer,
+                "opt": opt,
+                "lr_decay": lr_decay
+            }
         })
 
     # Run the prediction
