@@ -14,9 +14,10 @@ def create_dataset(batch_size,
                    logger=print):
 
     if torch.cuda.is_available():
-        device_data = 0
+        device_data = "cuda"
     else:
-        device_data = -1
+        device_data = "cpu"
+
     source = data.Field(batch_first=True, lower=True, init_token="<bos>")
     target = data.Field(batch_first=True, lower=True, eos_token="<eos>")
 
@@ -52,17 +53,16 @@ def create_dataset(batch_size,
     else:
         logger("neither train_path or val_path were defined. "
                "using WMT14 dataset as a fallback")
-        train, val, _ = get_wmt_dataset(exts, fields)
+        train, val, _ = get_wmt_dataset((".de", ".en"), fields)
 
     source.build_vocab(train.src, min_freq=1, max_size=enc_max_vocab)
     target.build_vocab(train.trg, min_freq=1, max_size=dec_max_vocab)
 
-    train_iter, val_iter = data.BucketIterator.splits(
-        (train, val),
-        batch_size=batch_size,
-        repeat=False,
-        shuffle=True,
-        device=device_data)
+    train_iter, val_iter = data.BucketIterator.splits((train, val),
+                                                      batch_size=batch_size,
+                                                      repeat=False,
+                                                      shuffle=True,
+                                                      device=device_data)
 
     return train_iter, val_iter, source.vocab, target.vocab
 

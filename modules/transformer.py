@@ -1,5 +1,4 @@
 import torch.nn as nn
-import torch.nn.functional as F
 
 from modules.decoder import TransformerDecoder
 from modules.embedding import TransformerEmbedding
@@ -17,24 +16,28 @@ class Transformer(nn.Module):
                  dec_units,
                  dropout_rate=0.8):
         super(Transformer, self).__init__()
-        self._dropout_rate = dropout_rate
         enc_vocab_size = len(enc_vocab.itos)
         dec_vocab_size = len(dec_vocab.itos)
 
-        self.encoder_embedding = TransformerEmbedding(
-            vocab_size=enc_vocab_size,
-            padding_idx=enc_vocab.stoi["<pad>"],
-            max_length=max_length,
-            embedding_size=enc_emb_size)
-        self.decoder_embedding = TransformerEmbedding(
-            vocab_size=dec_vocab_size,
-            padding_idx=enc_vocab.stoi["<pad>"],
-            max_length=max_length,
-            embedding_size=dec_emb_size)
+        self.encoder_embedding = nn.Sequential(
+            TransformerEmbedding(
+                vocab_size=enc_vocab_size,
+                padding_idx=enc_vocab.stoi["<pad>"],
+                max_length=max_length,
+                embedding_size=enc_emb_size), nn.Dropout(p=dropout_rate))
+        self.decoder_embedding = nn.Sequential(
+            TransformerEmbedding(
+                vocab_size=dec_vocab_size,
+                padding_idx=enc_vocab.stoi["<pad>"],
+                max_length=max_length,
+                embedding_size=dec_emb_size), nn.Dropout(p=dropout_rate))
 
-        self.encoder = TransformerEncoder(enc_emb_size, enc_units)
+        self.encoder = nn.Sequential(
+            TransformerEncoder(enc_emb_size, enc_units),
+            nn.Dropout(p=dropout_rate))
         self.decoder = TransformerDecoder(dec_emb_size, enc_emb_size,
                                           dec_units)
+        self.decoder_drop = nn.Dropout(p=dropout_rate)
 
         self.output_layer = nn.Linear(
             in_features=enc_units[-1], out_features=dec_vocab_size)
@@ -42,16 +45,16 @@ class Transformer(nn.Module):
 
     def forward(self, enc_input, dec_input):
         enc_embed = self.encoder_embedding(enc_input)
-        enc_embed = F.dropout(enc_embed, self._dropout_rate)
         encoder_result = self.encoder(enc_embed)
-        encoder_result = F.dropout(encoder_result, self._dropout_rate)
 
         dec_embed = self.decoder_embedding(dec_input)
-        dec_embed = F.dropout(dec_embed, self._dropout_rate)
         decoder_result = self.decoder(dec_embed, encoder_result)
-        decoder_result = F.dropout(decoder_result, self._dropout_rate)
+        decoder_result = self.decoder_drop(decoder_result)
 
-        output = self.output_layer(decoder_result)
+        output = self.output_layer(
+            decoder_result.view(-1, decoder_result.size(-1)))
         softmax = self.softmax(output)
+        softmax = softmax.view(
+            decoder_result.size(0), decoder_result.size(1), -1)
 
         return softmax, output

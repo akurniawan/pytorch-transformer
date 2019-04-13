@@ -26,12 +26,11 @@ class TransformerEmbedding(nn.Module):
             self.pos_embedding.weight = pos_enc_weight
 
     def _sin_cos_enc(self, max_length, embedding_size):
-        position_enc = np.array(
-            [[
-                pos / np.power(10000, 2 * i / embedding_size)
-                for i in range(embedding_size)
-            ] for pos in range(max_length)],
-            dtype=np.float32)
+        position_enc = np.array([[
+            pos / np.power(10000, 2 * i / embedding_size)
+            for i in range(embedding_size)
+        ] for pos in range(max_length)],
+                                dtype=np.float32)
 
         # put sinusodial on even position
         position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
@@ -44,7 +43,7 @@ class TransformerEmbedding(nn.Module):
         word_embedding = self.word_embedding(X)
         if self._use_positional_embedding:
             T = X.size(1)
-            pos = torch.arange(T).expand(X.size()).long()
+            pos = torch.arange(T, device=X.device).expand(X.size()).long()
             pos_embedding = self.pos_embedding(pos)
             word_embedding += pos_embedding
 

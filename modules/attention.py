@@ -198,8 +198,9 @@ class MultiHeadAttention(nn.Module):
 
         self._num_units = num_units
         self._h = h
-        self._key_dim = torch.tensor(
-            data=[key_dim], requires_grad=False, dtype=torch.float32)
+        self._key_dim = nn.Parameter(
+            torch.tensor(data=[key_dim], dtype=torch.float32),
+            requires_grad=False)
         self._dropout_p = dropout_p
         self._is_masked = is_masked
 
@@ -231,7 +232,8 @@ class MultiHeadAttention(nn.Module):
             diag_vals = attention[0].sign().abs()
             diag_mat = diag_vals.tril()
             diag_mat = diag_mat.unsqueeze(0).expand(attention.size())
-            mask = torch.ones(diag_mat.size()) * (-2**32 + 1)
+            mask = torch.ones(
+                diag_mat.size(), device=query.device) * (-2**32 + 1)
             # this is some trick that I use to combine the lower diagonal
             # matrix and its masking. (diag_mat-1).abs() will reverse the value
             # inside diag_mat, from 0 to 1 and 1 to zero. with this
