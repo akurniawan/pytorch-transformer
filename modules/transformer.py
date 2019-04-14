@@ -14,7 +14,7 @@ class Transformer(nn.Module):
                  dec_emb_size,
                  enc_units,
                  dec_units,
-                 dropout_rate=0.8):
+                 dropout_rate=0.1):
         super(Transformer, self).__init__()
         enc_vocab_size = len(enc_vocab.itos)
         dec_vocab_size = len(dec_vocab.itos)

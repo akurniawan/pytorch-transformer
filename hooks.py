@@ -1,37 +1,49 @@
 import torch
+import random
 
 from pathlib import Path
 
 
-def validation_result_hook(evaluator, loader):
+def validation_result_hook(evaluator,
+                           loader,
+                           trg_vocab,
+                           val_interval,
+                           logger=print):
+    def _print_current_prediction(engine):
+        n_sample = 100
+        result_str = ""
+        bold_code = "\033[1m"
+        end_bold_code = "\033[0m"
+        result_str += "Current state of the model\n"
+        result_str += ("=" * 100) + "\n"
+        rand_ids = random.sample(
+            range(len(engine.state.output["targets"])), n_sample)
+        pred_sample = [engine.state.output["predictions"][i] for i in rand_ids]
+        trg_sample = [engine.state.output["targets"][i] for i in rand_ids]
+        for this_idx, (pred, trg) in enumerate(zip(pred_sample, trg_sample)):
+            vocab_mapper = lambda x: trg_vocab.itos[x]
+            preds = list(map(vocab_mapper, pred))
+            trgs = list(map(vocab_mapper, trg))
+            result_str += "{}Prediction{}: {}\n".format(
+                bold_code, end_bold_code, " ".join(preds[:len(trgs)]))
+            result_str += "{}Target{}: {}\n".format(bold_code, end_bold_code,
+                                                    " ".join(trgs))
+            result_str += "{}Difference of length{}: {}\n\n".format(
+                bold_code, end_bold_code, abs(len(preds) - len(trgs)))
+            if this_idx < len(pred_sample) - 1:
+                result_str += "\n"
+        result_str += ("=" * 100)
+        logger(result_str)
+
     def validation_result(engine):
-        evaluator.run(loader)
-        metrics = evaluator.state.metrics
-        avg_loss = metrics["val_loss"]
-        print("Validation loss: ", avg_loss)
+        if engine.state.iteration % val_interval == 0:
+            evaluator.run(loader)
+            metrics = evaluator.state.metrics
+            avg_loss = metrics["val_loss"]
+            logger("Validation loss: %d" % avg_loss)
+            _print_current_prediction(evaluator)
 
     return validation_result
-
-
-def print_logs_hook(print_freq, max_epochs, total_data):
-    def print_logs(engine):
-        if (engine.state.iteration - 1) % print_freq == 0:
-            columns = engine.state.metrics.keys()
-            values = [
-                str(round(float(value), 5))
-                for value in engine.state.metrics.values()
-            ]
-            message = '[{epoch}/{max_epoch}][{i}/{max_i}]'.format(
-                epoch=engine.state.epoch,
-                max_epoch=max_epochs,
-                i=(engine.state.iteration % total_data),
-                max_i=total_data)
-            for name, value in zip(columns, values):
-                message += ' | {name}: {value}'.format(name=name, value=value)
-
-            print(message)
-
-    return print_logs
 
 
 def restore_checkpoint_hook(model, model_path, logger=print):
@@ -48,30 +60,3 @@ def restore_checkpoint_hook(model, model_path, logger=print):
             logger("Something wrong while restoring the model: %s" % str(e))
 
     return restore_checkpoint
-
-
-def print_current_prediction_hook(vocab, interval, logger=print):
-    def print_current_condition(engine):
-        if engine.state.iteration % interval == 0:
-            result_str = ""
-            result_str += "Current state of the model\n"
-            result_str += ("=" * 100) + "\n"
-            pred_last_hist = engine.state.output[0]
-            trg_last_hist = engine.state.output[-1]
-            batch_size = pred_last_hist.size(0)
-            for this_idx, (pred, trg) in enumerate(
-                    zip(pred_last_hist, trg_last_hist)):
-                _, idx = pred.max(1)
-                preds = []
-                trgs = []
-                for pred_idx, trg_idx in zip(idx.numpy(), trg.numpy()):
-                    preds.append(vocab.itos[pred_idx])
-                    trgs.append(vocab.itos[trg_idx])
-                result_str += (" ".join(preds)) + "\n"
-                result_str += (" ".join(trgs)) + "\n"
-                if this_idx < batch_size - 1:
-                    result_str += "\n"
-            result_str += ("=" * 100)
-            logger(result_str)
-
-    return print_current_condition

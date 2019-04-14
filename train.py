@@ -1,3 +1,4 @@
+import logging
 import argparse
 import torch
 import torch.nn as nn
@@ -19,7 +20,10 @@ def run(model_dir, max_len, source_train_path, target_train_path,
         source_val_path, target_val_path, enc_max_vocab, dec_max_vocab,
         encoder_emb_size, decoder_emb_size, encoder_units, decoder_units,
         batch_size, epochs, learning_rate, decay_step, decay_percent,
-        log_interval, save_interval, compare_interval):
+        val_interval, save_interval, compare_interval):
+
+    logging.basicConfig(
+        filename="validation.log", filemode="w", level=logging.INFO)
 
     train_iter, val_iter, source_vocab, target_vocab = create_dataset(
         batch_size, enc_max_vocab, dec_max_vocab, source_train_path,
@@ -45,7 +49,7 @@ def run(model_dir, max_len, source_train_path, target_train_path,
         lr_decay.step()
         opt.zero_grad()
 
-        softmaxed_predictions, predictions = transformer(batch.src, batch.trg)
+        _, predictions = transformer(batch.src, batch.trg)
 
         flattened_predictions = predictions.view(-1, len(target_vocab.itos))
         flattened_target = batch.trg.view(-1)
@@ -55,7 +59,7 @@ def run(model_dir, max_len, source_train_path, target_train_path,
         loss.backward()
         opt.step()
 
-        return softmaxed_predictions.data, loss.item(), batch.trg.data
+        return loss.cpu().item()
 
     def validation_step(engine, batch):
         transformer.eval()
@@ -69,14 +73,29 @@ def run(model_dir, max_len, source_train_path, target_train_path,
 
             loss = loss_fn(flattened_predictions, flattened_target)
 
-            return loss.item()
+            if not engine.state.output:
+                predictions = softmaxed_predictions.argmax(
+                    -1).cpu().numpy().tolist()
+                targets = batch.trg.cpu().numpy().tolist()
+            else:
+                predictions = engine.state.output[
+                    "predictions"] + softmaxed_predictions.argmax(
+                        -1).cpu().numpy().tolist()
+                targets = engine.state.output["targets"] + batch.trg.cpu(
+                ).numpy().tolist()
+
+            return {
+                "loss": loss.cpu().item(),
+                "predictions": predictions,
+                "targets": targets
+            }
 
     trainer = Engine(training_step)
     evaluator = Engine(validation_step)
     checkpoint_handler = ModelCheckpoint(
         model_dir,
         "Transformer",
-        save_interval=ARGS.save_interval,
+        save_interval=save_interval,
         n_saved=10,
         require_empty=False)
 
@@ -89,20 +108,24 @@ def run(model_dir, max_len, source_train_path, target_train_path,
         step=Events.ITERATION_COMPLETED)
 
     # Attach training metrics
-    RunningAverage(output_transform=lambda x: x[1]).attach(
-        trainer, "train_loss")
+    RunningAverage(output_transform=lambda x: x).attach(trainer, "train_loss")
     # Attach validation metrics
-    RunningAverage(output_transform=lambda x: x).attach(evaluator, "val_loss")
+    RunningAverage(output_transform=lambda x: x["loss"]).attach(
+        evaluator, "val_loss")
 
     pbar = ProgressBar()
     pbar.attach(trainer, ["train_loss"])
-    pbar.attach(evaluator, ["val_loss"])
 
     # trainer.add_event_handler(Events.TRAINING_STARTED,
     #                           restore_checkpoint_hook(transformer, model_dir))
     trainer.add_event_handler(
-        Events.EPOCH_COMPLETED,
-        handler=validation_result_hook(evaluator, val_iter))
+        Events.ITERATION_COMPLETED,
+        handler=validation_result_hook(
+            evaluator,
+            val_iter,
+            target_vocab,
+            val_interval,
+            logger=logging.info))
 
     trainer.add_event_handler(
         event_name=Events.ITERATION_COMPLETED,
@@ -181,10 +204,10 @@ if __name__ == '__main__':
         default=512,
         help="Size of decoder's embedding")
     PARSER.add_argument(
-        "--log_interval",
+        "--val_interval",
         type=int,
-        default=2,
-        help="""Print loss for every N steps""")
+        default=1000,
+        help="""Run evaluation for every N steps""")
     PARSER.add_argument(
         "--save_interval",
         type=int,
@@ -233,6 +256,6 @@ if __name__ == '__main__':
         learning_rate=ARGS.learning_rate,
         decay_step=ARGS.decay_step,
         decay_percent=ARGS.decay_percent,
-        log_interval=ARGS.log_interval,
+        val_interval=ARGS.val_interval,
         save_interval=ARGS.save_interval,
         compare_interval=ARGS.compare_interval)
