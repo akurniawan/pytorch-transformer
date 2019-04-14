@@ -63,45 +63,112 @@ python train.py --batch_size 3 --source_train_path wmt14/train.en --target_train
 ```
 
 ## Results
-I haven't had a chance to fully run this code over the whole WMT data, I only tested it using 100 training data. The result, however, is pretty exciting remembering we are not using neither CNN or RNN! Below I present the result after several epochs of training. The results are consist of two rows each, where the former is the prediction and the later is the target
+With the following command
+```python train.py --batch_size 16 --max_len 500 --decoder_units 512,512,512 --save_interval 500 --enc_max_vocab 37000 --dec_max_vocab 37000 --decay_step 4000 --epochs 5```
+I was able to get result as the following
 ```
-arbeitsp@@ lan <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-arbeitsp@@ lan <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+Train loss: 2.17e-02
+Validation loss: 0
 
-zum mittwoch : <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-zum mittwoch : <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+Validation result
+=================
+Prediction: zwei anlagen so nah bei@@ einander : absicht oder schil@@ d@@ bürger@@ st@@ reich ? <eos>
+Target: zwei anlagen so nah bei@@ einander : absicht oder schil@@ d@@ bürger@@ st@@ reich ? <eos>
+Difference of length: 0
 
-wiederaufnahme der sitzungsperiode <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-wiederaufnahme der sitzungsperiode <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
 
-das war der beschluß . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-das war der beschluß . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+Prediction: al@@ fred ab@@ el , der das grundstück derzeit verwaltet , hatte die ver@@ schön@@ erungs@@ aktion mit seinem kollegen rein@@ hard dom@@ ke von der b@@ i ab@@ gesprochen . <eos>
+Target: al@@ fred ab@@ el , der das grundstück derzeit verwaltet , hatte die ver@@ schön@@ erungs@@ aktion mit seinem kollegen rein@@ hard dom@@ ke von der b@@ i ab@@ gesprochen . <eos>
+Difference of length: 0
 
-( beifall der pse-fraktion ) <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-( beifall der pse-fraktion ) <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
 
-warum finden keine brand@@ schutz@@ bel@@ ehr@@ ungen statt ? <eos> <pad> <pad> <pad> <pad> <pad> <pad>
-warum finden keine brand@@ schutz@@ bel@@ ehr@@ ungen statt ? <eos> <pad> <pad> <pad> <pad> <pad> <pad>
+Prediction: andere komit@@ e@@ em@@ it@@ gli@@ eder sagten , es gebe nur ver@@ einzel@@ te berichte von pi@@ loten , die für eine stör@@ ung von flugzeug@@ systemen durch die geräte sp@@ rä@@ chen , und die meisten davon seien sehr alt . <eos>
+Target: andere komit@@ e@@ em@@ it@@ gli@@ eder sagten , es gebe nur ver@@ einzel@@ te berichte von pi@@ loten , die für eine stör@@ ung von flugzeug@@ systemen durch die geräte sp@@ rä@@ chen , und die meisten davon seien sehr alt . <eos>
+Difference of length: 0
 
-wir haben dann abgestimmt . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-wir haben dann abgestimmt . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
 
-wir wissen nicht , was passiert . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-wir wissen nicht , was passiert . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+Prediction: der mann aus lamp@@ recht@@ sh@@ au@@ sen wollte an der außen@@ fass@@ ade eines gas@@ th@@ auses einen def@@ ekten heiz@@ ungs@@ füh@@ ler aus@@ wechseln . <eos> <pad> <pad>
+Target: der mann aus lamp@@ recht@@ sh@@ au@@ sen wollte an der außen@@ fass@@ ade eines gas@@ th@@ auses einen def@@ ekten heiz@@ ungs@@ füh@@ ler aus@@ wechseln . <eos> <pad> <pad>
+Difference of length: 0
 
-frau präsidentin , zur geschäftsordnung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-frau präsidentin , zur geschäftsordnung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
 
-frau präsidentin , zur geschäftsordnung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-frau präsidentin , zur geschäftsordnung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+Prediction: falls allerdings in den kommenden monaten keine neuen bestellungen bekannt gegeben werden , dann erwarten wir , dass der markt dem programm gegenüber skep@@ tischer wird . <eos>
+Target: falls allerdings in den kommenden monaten keine neuen bestellungen bekannt gegeben werden , dann erwarten wir , dass der markt dem programm gegenüber skep@@ tischer wird . <eos>
+Difference of length: 0
 
-alle anderen waren anderer meinung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-alle anderen waren anderer meinung . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
 
-es gab eine abstimmung zu diesem punkt . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-es gab eine abstimmung zu diesem punkt . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+Prediction: es recht@@ fertigt nicht die ergebnisse eines berichts , in dem es heißt , die anstrengungen des wei@@ ßen hauses zur ru@@ hi@@ g@@ stellung der medien seien die „ aggres@@ si@@ v@@ sten ... seit der ni@@ x@@ on-@@ regierung “ . <eos>
+Target: es recht@@ fertigt nicht die ergebnisse eines berichts , in dem es heißt , die anstrengungen des wei@@ ßen hauses zur ru@@ hi@@ g@@ stellung der medien seien die „ aggres@@ si@@ v@@ sten ... seit der ni@@ x@@ on-@@ regierung “ . <eos>
+Difference of length: 0
 
-der kollege hän@@ sch hat sie dort vertreten . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
-der kollege hän@@ sch hat sie dort vertreten . <eos> <pad> <pad> <pad> <pad> <pad> <pad> <pad>
+
+Prediction: &quot; der schutz möglichst vieler be@@ bau@@ ter grund@@ stücke ist das ziel &quot; , so h@@ äuß@@ ler . <eos> <pad> <pad>
+Target: &quot; der schutz möglichst vieler be@@ bau@@ ter grund@@ stücke ist das ziel &quot; , so h@@ äuß@@ ler . <eos> <pad> <pad>
+Difference of length: 0
+
+
+Prediction: das kon@@ sist@@ orium im nächsten jahr sei deshalb bedeut@@ sam , weil es das erste seit der wahl von fran@@ z@@ is@@ kus im märz diesen jahres sei , so val@@ ero . <eos> <pad>
+Target: das kon@@ sist@@ orium im nächsten jahr sei deshalb bedeut@@ sam , weil es das erste seit der wahl von fran@@ z@@ is@@ kus im märz diesen jahres sei , so val@@ ero . <eos> <pad>
+Difference of length: 0
+
+
+Prediction: samsung , hu@@ a@@ wei und ht@@ c stellen hand@@ ys her , die mit goo@@ g@@ les betriebssystem andro@@ id arbeiten , das in schar@@ f@@ em wettbewerb zu den mobil@@ produkten von apple und microsoft steht . <eos>
+Target: samsung , hu@@ a@@ wei und ht@@ c stellen hand@@ ys her , die mit goo@@ g@@ les betriebssystem andro@@ id arbeiten , das in schar@@ f@@ em wettbewerb zu den mobil@@ produkten von apple und microsoft steht . <eos>
+Difference of length: 0
+
+
+Prediction: etw@@ a gegen 14 : 15 uhr am mittwoch sah ein spaziergän@@ ger , der seinen hund aus@@ führte , die gest@@ rand@@ ete ru@@ by auf dem 15 meter hohen absatz im stein@@ bruch . <eos> <pad> <pad> <pad>
+Target: etw@@ a gegen 14 : 15 uhr am mittwoch sah ein spaziergän@@ ger , der seinen hund aus@@ führte , die gest@@ rand@@ ete ru@@ by auf dem 15 meter hohen absatz im stein@@ bruch . <eos> <pad> <pad> <pad>
+Difference of length: 0
+
+
+Prediction: c@@ ook sagte : „ nach den erhöh@@ ungen bei der st@@ emp@@ el@@ steuer auf hoch@@ prei@@ si@@ ge wohnungen und der einführung der damit verbundenen gesetzgebung gegen ein um@@ gehen kann man schwer@@ lich behaupten , hochwertige immobilien seien zu niedrig best@@ euert , ungeachtet der auswirkungen des ver@@ alt@@ eten gemein@@ dest@@ euer@@ systems . “ <eos> <pad> <pad>
+Target: c@@ ook sagte : „ nach den erhöh@@ ungen bei der st@@ emp@@ el@@ steuer auf hoch@@ prei@@ si@@ ge wohnungen und der einführung der damit verbundenen gesetzgebung gegen ein um@@ gehen kann man schwer@@ lich behaupten , hochwertige immobilien seien zu niedrig best@@ euert , ungeachtet der auswirkungen des ver@@ alt@@ eten gemein@@ dest@@ euer@@ systems . “ <eos> <pad> <pad>
+Difference of length: 0
+
+
+Prediction: ohne die unterstützung des einzigen anderen herstell@@ ers großer moderner j@@ ets sagen experten , dass der ruf nach einem neuen branchen@@ standard vermutlich ver@@ pu@@ ffen werde , aber von der welle von 7@@ 7@@ 7@@ x-@@ verk@@ äu@@ fen ab@@ lenken könnte . <eos> <pad> <pad>
+Target: ohne die unterstützung des einzigen anderen herstell@@ ers großer moderner j@@ ets sagen experten , dass der ruf nach einem neuen branchen@@ standard vermutlich ver@@ pu@@ ffen werde , aber von der welle von 7@@ 7@@ 7@@ x-@@ verk@@ äu@@ fen ab@@ lenken könnte . <eos> <pad> <pad>
+Difference of length: 0
+
+
+Prediction: &quot; bildung ist ein wichtiger standor@@ t@@ faktor &quot; , unter@@ strich clau@@ dia st@@ eh@@ le , direkt@@ or@@ in der hans@@ -@@ th@@ om@@ a-@@ schule , die das vern@@ etz@@ te schul@@ projekt bildungs@@ zentrum hoch@@ schwar@@ zw@@ ald vor@@ stellte . <eos> <pad> <pad>
+Target: &quot; bildung ist ein wichtiger standor@@ t@@ faktor &quot; , unter@@ strich clau@@ dia st@@ eh@@ le , direkt@@ or@@ in der hans@@ -@@ th@@ om@@ a-@@ schule , die das vern@@ etz@@ te schul@@ projekt bildungs@@ zentrum hoch@@ schwar@@ zw@@ ald vor@@ stellte . <eos> <pad> <pad>
+Difference of length: 0
+
+
+Prediction: es bestand die möglichkeit , dass sie sehr schwer verletzt war oder sch@@ lim@@ mer@@ es . <eos>
+Target: es bestand die möglichkeit , dass sie sehr schwer verletzt war oder sch@@ lim@@ mer@@ es . <eos>
+Difference of length: 0
+
+
+Prediction: zu dem unfall war es nach angaben der polizei gekommen , als ein 26 jahre alter mann am donn@@ erst@@ ag@@ abend , gegen 22 uhr , mit einem dam@@ en@@ fahr@@ rad ordnungs@@ widri@@ g auf dem linken geh@@ weg vom bahn@@ hof@@ platz in richtung markt@@ stätte unterwegs war . <eos> <pad> <pad> <pad>
+Target: zu dem unfall war es nach angaben der polizei gekommen , als ein 26 jahre alter mann am donn@@ erst@@ ag@@ abend , gegen 22 uhr , mit einem dam@@ en@@ fahr@@ rad ordnungs@@ widri@@ g auf dem linken geh@@ weg vom bahn@@ hof@@ platz in richtung markt@@ stätte unterwegs war . <eos> <pad> <pad> <pad>
+Difference of length: 0
+
+
+Prediction: &quot; dieser aufwand ist nun weg &quot; , freut sich ma@@ ier . <eos> <pad>
+Target: &quot; dieser aufwand ist nun weg &quot; , freut sich ma@@ ier . <eos> <pad>
+Difference of length: 0
+
+
+Prediction: thomas op@@ per@@ mann , der abgeordnete , der den für den geheim@@ dienst zuständigen parlamentarischen ausschuss leitet , erklärte , man solle die gelegenheit ergreifen , snow@@ den als zeu@@ ge anzu@@ hören , wenn dies möglich sei , „ ohne ihn zu gefährden und die beziehungen zu den usa völlig zu ru@@ in@@ ieren “ . <eos> <pad> <pad> <pad>
+Target: thomas op@@ per@@ mann , der abgeordnete , der den für den geheim@@ dienst zuständigen parlamentarischen ausschuss leitet , erklärte , man solle die gelegenheit ergreifen , snow@@ den als zeu@@ ge anzu@@ hören , wenn dies möglich sei , „ ohne ihn zu gefährden und die beziehungen zu den usa völlig zu ru@@ in@@ ieren “ . <eos> <pad> <pad> <pad>
+Difference of length: 0
+
+
+Prediction: r@@ eine pflanzen@@ mar@@ gar@@ ine sei eine gute alternative zu but@@ ter , jo@@ gh@@ urt lasse durch so@@ ja@@ jo@@ gh@@ urt ersetzen . <eos> <pad>
+Target: r@@ eine pflanzen@@ mar@@ gar@@ ine sei eine gute alternative zu but@@ ter , jo@@ gh@@ urt lasse durch so@@ ja@@ jo@@ gh@@ urt ersetzen . <eos> <pad>
+Difference of length: 0
+
+
+Prediction: der handel am nas@@ da@@ q op@@ tions market wurde am frei@@ tag@@ nach@@ mittag deutscher zeit unterbrochen . <eos>
+Target: der handel am nas@@ da@@ q op@@ tions market wurde am frei@@ tag@@ nach@@ mittag deutscher zeit unterbrochen . <eos>
+Difference of length: 0
+
+
+Prediction: ö@@ z@@ dem@@ ir will j@@ azz@@ ausbildung in stuttgart erhalten <eos>
+Target: ö@@ z@@ dem@@ ir will j@@ azz@@ ausbildung in stuttgart erhalten <eos>
+Difference of length: 0
 ```
-The result below are from training data and not validation data. The loss still embarassing and I will try to improve it little by little since I don't have GPU to train the model. Will keep you guys posted!
+I'm still not really sure why the validation can have such a good accuracy, will need to drill down and debug the model further.
