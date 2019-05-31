@@ -12,7 +12,7 @@ from ignite.handlers import Timer
 from ignite.handlers import ModelCheckpoint
 from ignite.contrib.handlers import ProgressBar
 
-from modules.transformer import Transformer
+from models.transformer import Transformer
 from data import create_dataset
 
 
