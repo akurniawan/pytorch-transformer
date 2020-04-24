@@ -1,24 +1,34 @@
 # pytorch-transformer
+
+**WARNING! Still in the middle of refactoring, please revert to bb88f0a for the latest working version of this repo**
+
 Implementation of "Attention is All You Need" paper with PyTorch.
 Installed components are:
+
 1. Multi-Head Attention
 2. Positional Encoding with sinusodial
 3. Position Wise FFN
 4. Label Smoothing (unfortunately still can't use this because PyTorch has no support for loss calculation with logits yet :( )
 
 ## Requirements
+
 * [pytorch](http://pytorch.org/)
 * [torchtext](https://github.com/pytorch/text/)
 * [ignite](https://github.com/pytorch/ignite/)
 
 ## How to use?
+
 ### Training
+
 You can run the training with simply `python train.py`. If you want to add other arguments. Please see the example below
-```
+
+```bash
 python train.py --batch_size 3 --source_train_path wmt14/train.en --target_train_path wmt14/train.de --source_val_path wmt14/eval.en --target_val_path wmt14/eval.de
 ```
+
 ### Arguments
-```
+
+```bash
   --batch_size BATCH_SIZE
                         Number of batch in single iteration
   --source_train_path SOURCE_TRAIN_PATH
@@ -63,10 +73,16 @@ python train.py --batch_size 3 --source_train_path wmt14/train.en --target_train
 ```
 
 ## Results
+
 With the following command
-```python train.py --batch_size 16 --max_len 500 --decoder_units 512,512,512 --save_interval 500 --enc_max_vocab 37000 --dec_max_vocab 37000 --decay_step 4000 --epochs 5```
-I was able to get result as the following
+
+```bash
+python train.py --batch_size 16 --max_len 500 --decoder_units 512,512,512 --save_interval 500 --enc_max_vocab 37000 --dec_max_vocab 37000 --decay_step 4000 --epochs 5
 ```
+
+I was able to get result as the following
+
+```bash
 Train loss: 2.17e-02
 Validation loss: 0
 
@@ -171,4 +187,5 @@ Prediction: ö@@ z@@ dem@@ ir will j@@ azz@@ ausbildung in stuttgart erhalten <e
 Target: ö@@ z@@ dem@@ ir will j@@ azz@@ ausbildung in stuttgart erhalten <eos>
 Difference of length: 0
 ```
+
 I'm still not really sure why the validation can have such a good accuracy, will need to drill down and debug the model further.
