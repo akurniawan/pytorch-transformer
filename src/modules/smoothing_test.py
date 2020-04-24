@@ -1,5 +1,4 @@
 import unittest
-import math
 import torch
 
 from hypothesis import given
@@ -13,7 +12,6 @@ class SmoothingTest(unittest.TestCase):
     @given(integers(1, 1000))
     def test_label_smoothing(self, C):
         onehot = OneHotEmbedding(1000)
-        x = torch.LongTensor([C])
         smoothed_label = label_smoothing(onehot(torch.LongTensor([C])))
 
         test = smoothed_label.sum(1).data.numpy()[0]
