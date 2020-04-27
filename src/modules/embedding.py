@@ -18,7 +18,7 @@ class TransformerEmbedding(nn.Module):
     def forward(self, X):
         out = self.word_embedding(X)
         if self.positional_embedding:
-            out = self.pos_embedding(out)
+            out = self.positional_embedding(out)
 
         return out
 

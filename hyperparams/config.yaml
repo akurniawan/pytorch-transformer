@@ -1,0 +1,28 @@
+dataset:
+  train: "/Users/adityakurniawan/Workspace/open-source/pytorch-transformer/wmt14/train"
+  eval: "/Users/adityakurniawan/Workspace/open-source/pytorch-transformer/wmt14/eval"
+  test: "/Users/adityakurniawan/Workspace/open-source/pytorch-transformer/wmt14/test"
+  source_ext: "en"
+  target_ext: "de"
+  batch_size: 32
+  source_min_freq: 10
+  target_min_freq: 10
+  source_max_freq: 10000
+  target_max_freq: 10000
+training:
+  epochs: 10
+  learning_rate: 0.0004
+  max_len: 100
+  decay_step: 500
+  decay_percent: 0.1
+  val_log: 100
+  checkpoint: "./checkpoints"
+model:
+  encoder_emb_size: 512
+  decoder_emb_size: 512
+  enc_dim: 512
+  enc_num_head: 8
+  enc_num_layer: 1
+  dec_dim: 512
+  dec_num_head: 8
+  dec_num_layer: 1

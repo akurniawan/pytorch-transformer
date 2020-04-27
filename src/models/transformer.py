@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from models.encoder import TransformerEncoder
-from models.decoder import TransformerDecoder
-from modules.embedding import PositionalEncoding, TransformerEmbedding
+from .encoder import TransformerEncoder
+from .decoder import TransformerDecoder
+from ..modules.embedding import PositionalEncoding, TransformerEmbedding
 
 
 class Transformer(nn.Module):
@@ -37,11 +37,10 @@ class Transformer(nn.Module):
         self.decoder_embedding = TransformerEmbedding(word_dec_embedding,
                                                       pos_decoder)
 
-        self.encoder = TransformerEncoder(enc_dim, enc_num_head,
-                                          enc_num_layer),
+        self.encoder = TransformerEncoder(enc_dim, enc_num_head, enc_num_layer)
         self.decoder = TransformerDecoder(dec_dim, dec_num_head, dec_num_layer)
 
-        self.output_layer = nn.Linear(in_features=dec_dim,
+        self.logits_layer = nn.Linear(in_features=dec_dim,
                                       out_features=dec_vocab_size)
         self.softmax = nn.Softmax(dim=-1)
 
@@ -53,13 +52,13 @@ class Transformer(nn.Module):
         decoder_result = self.decoder(dec_embed, encoder_result)
         decoder_result = decoder_result.transpose(0, 1)
 
-        output = self.output_layer(
-            decoder_result.view(-1, decoder_result.size(-1)))
-        softmax = self.softmax(output)
-        softmax = softmax.view(decoder_result.size(0), decoder_result.size(1),
-                               -1)
+        logits = self.logits_layer(
+            decoder_result.reshape(-1, decoder_result.size(-1)))
+        softmax = self.softmax(logits)
+        softmax = softmax.reshape(decoder_result.size(0),
+                                  decoder_result.size(1), -1)
 
-        return softmax, output
+        return softmax, logits
 
     def generate_square_subsequent_mask(self, sz):
         """Generate a square mask for the sequence.

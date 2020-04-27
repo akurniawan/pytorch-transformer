@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from modules.ffn import PositionWiseFFN
+from ..modules.ffn import PositionWiseFFN
 
 
 class _Layer(nn.Module):
