@@ -70,7 +70,7 @@ def run(cfg: DictConfig):
             flattened_target = batch.trg.view(-1)
             loss = loss_fn(logits, flattened_target)
 
-            preds = probs.argmax(-1).tolist()
+            preds = probs.transpose(0, 1).argmax(-1).tolist()
             targets = batch.trg.t().tolist()
 
             if engine.state.output:

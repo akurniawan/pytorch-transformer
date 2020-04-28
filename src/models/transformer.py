@@ -50,7 +50,6 @@ class Transformer(nn.Module):
 
         dec_embed = self.decoder_embedding(dec_input)
         decoder_result = self.decoder(dec_embed, encoder_result)
-        decoder_result = decoder_result.transpose(0, 1)
 
         logits = self.logits_layer(
             decoder_result.reshape(-1, decoder_result.size(-1)))
