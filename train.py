@@ -3,139 +3,125 @@ import hydra
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import pytorch_lightning as pl
 
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
+from pytorch_lightning import Trainer, seed_everything
 # from src.utils.hooks import (validation_result_hook, restore_checkpoint_hook)
 from src.utils import print_current_prediction
 from torch.optim.lr_scheduler import StepLR
-from ignite.engine import Events, Engine
-from ignite.metrics import RunningAverage
-from ignite.handlers import Timer
-from ignite.handlers import ModelCheckpoint
-from ignite.contrib.handlers import ProgressBar
+# from ignite.engine import Events, Engine
+# from ignite.metrics import RunningAverage
+# from ignite.handlers import Timer
+# from ignite.handlers import ModelCheckpoint
+# from ignite.contrib.handlers import ProgressBar
 
 from src.models.transformer import Transformer
 from data import create_dataset
 
 
-@hydra.main(config_path="hyperparams/config.yaml")
-def run(cfg: DictConfig):
-    logging.basicConfig(filename="validation.log",
-                        filemode="w",
-                        level=logging.INFO)
+class MachineTranslationModel(pl.LightningModule):
+    def __init__(self, hparams, source_vocab, target_vocab):
+        super().__init__()
 
-    train_iter, val_iter, test_iter, source_vocab, target_vocab = create_dataset(
-        cfg.dataset)
-    transformer = Transformer(max_length=cfg.training.max_len,
-                              enc_vocab=source_vocab,
-                              dec_vocab=target_vocab,
-                              enc_emb_size=cfg.model.encoder_emb_size,
-                              dec_emb_size=cfg.model.decoder_emb_size,
-                              enc_dim=cfg.model.enc_dim,
-                              enc_num_head=cfg.model.enc_num_head,
-                              enc_num_layer=cfg.model.enc_num_layer,
-                              dec_dim=cfg.model.dec_dim,
-                              dec_num_head=cfg.model.dec_num_head,
-                              dec_num_layer=cfg.model.dec_num_layer)
-    loss_fn = nn.CrossEntropyLoss()
-    opt = optim.Adam(transformer.parameters(), lr=cfg.training.learning_rate)
-    lr_decay = StepLR(opt,
-                      step_size=cfg.training.decay_step,
-                      gamma=cfg.training.decay_percent)
+        self.hparams = hparams
+        self.model = Transformer(
+            max_length=hparams["training"]["max_len"],
+            enc_vocab=source_vocab,
+            dec_vocab=target_vocab,
+            enc_emb_size=hparams["model"]["encoder_emb_size"],
+            dec_emb_size=hparams["model"]["decoder_emb_size"],
+            enc_dim=hparams["model"]["enc_dim"],
+            enc_num_head=hparams["model"]["enc_num_head"],
+            enc_num_layer=hparams["model"]["enc_num_layer"],
+            dec_dim=hparams["model"]["dec_dim"],
+            dec_num_head=hparams["model"]["dec_num_head"],
+            dec_num_layer=hparams["model"]["dec_num_layer"])
+        self.criterion = nn.CrossEntropyLoss()
 
-    if torch.cuda.is_available():
-        transformer.cuda()
-        loss_fn.cuda()
+    def forward(self, batch):
+        return self.model(batch.src, batch.trg)
 
-    def training_step(engine, batch):
-        transformer.train()
-        opt.zero_grad()
-
-        _, logits = transformer(batch.src, batch.trg)
+    def training_step(self, batch, batch_idx):
+        _, logits = self(batch)
 
         flattened_target = batch.trg.view(-1)
-        loss = loss_fn(logits, flattened_target)
+        loss = self.criterion(logits, flattened_target)
 
-        loss.backward()
-        opt.step()
-        lr_decay.step()
+        tensorboard_logs = {'train_loss': loss.item()}
 
-        return loss.cpu().item()
+        return {'loss': loss, 'log': tensorboard_logs}
 
-    def validation_step(engine, batch):
-        transformer.eval()
+    def validation_step(self, batch, batch_idx):
         with torch.no_grad():
-            probs, logits = transformer(batch.src, batch.trg)
+            probs, logits = self(batch)
 
             flattened_target = batch.trg.view(-1)
-            loss = loss_fn(logits, flattened_target)
+            loss = self.criterion(logits, flattened_target)
 
-            preds = probs.transpose(0, 1).argmax(-1).tolist()
-            targets = batch.trg.t().tolist()
+            # preds = probs.transpose(0, 1).argmax(-1).tolist()
+            # targets = batch.trg.t().tolist()
 
-            if engine.state.output:
-                preds = engine.state.output["predictions"] + preds
-                targets = engine.state.output["targets"] + targets
+            return {
+                "loss": loss,
+                # "predictions": preds,
+                # "targets": targets
+            }
+
+    def test_step(self, batch, batch_idx):
+        with torch.no_grad():
+            probs, logits = self.model(batch.src, batch.trg)
+
+            flattened_target = batch.trg.view(-1)
+            loss = self.criterion(logits, flattened_target)
+
+            # preds = probs.transpose(0, 1).argmax(-1).tolist()
+            # targets = batch.trg.t().tolist()
 
             return {
                 "loss": loss.item(),
-                "predictions": preds,
-                "targets": targets
+                # "predictions": preds,
+                # "targets": targets
             }
 
-    trainer = Engine(training_step)
-    evaluator = Engine(validation_step)
-    checkpoint_handler = ModelCheckpoint(cfg.training.checkpoint,
-                                         "Transformer",
-                                         n_saved=10,
-                                         require_empty=False)
+    def validation_epoch_end(self, outputs):
+        avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
+        # avg_loss = avg_loss.item()
 
-    timer = Timer(average=True)
-    timer.attach(trainer,
-                 start=Events.EPOCH_STARTED,
-                 resume=Events.ITERATION_STARTED,
-                 pause=Events.ITERATION_COMPLETED,
-                 step=Events.ITERATION_COMPLETED)
+        tensorboard_logs = {"avg_val_loss": avg_loss}
+        return {"val_loss": avg_loss, "log": tensorboard_logs}
 
-    # Attach training metrics
-    RunningAverage(output_transform=lambda x: x).attach(trainer, "train_loss")
-    # Attach validation metrics
-    RunningAverage(output_transform=lambda x: x["loss"]).attach(
-        evaluator, "loss")
+    def configure_optimizers(self):
+        optimizer = optim.Adam(self.parameters(),
+                               lr=self.hparams["training"]["learning_rate"])
+        scheduler = StepLR(optimizer,
+                           step_size=self.hparams["training"]["decay_step"],
+                           gamma=self.hparams["training"]["decay_percent"])
+        return [optimizer], [scheduler]
 
-    pbar = ProgressBar()
-    pbar.attach(trainer, ["train_loss"])
+    # def train_dataloader(self):
+    #     return self.train_iter
 
-    # trainer.add_event_handler(
-    #     Events.TRAINING_STARTED,
-    #     restore_checkpoint_hook(transformer, cfg.training.checkpoint))
+    # def val_dataloader(self):
+    #     return self.val_iter
 
-    @trainer.on(Events.ITERATION_COMPLETED(every=cfg.training.val_log))
-    def log_validation_result(engine):
-        evaluator.run(val_iter)
-        metrics = evaluator.state.metrics
-        avg_loss = metrics["loss"]
-        logging.info("Validation loss: %d" % avg_loss)
-        print_current_prediction(evaluator, target_vocab)
+    # def test_dataloader(self):
+    #     return self.test_iter
 
-    @trainer.on(Events.COMPLETED)
-    def log_test_result(engine):
-        evaluator.run(test_iter)
-        metrics = evaluator.state.metrics
-        avg_loss = metrics["loss"]
-        logging.info("Test loss: %d" % avg_loss)
-        print_current_prediction(evaluator, target_vocab)
 
-    trainer.add_event_handler(event_name=Events.ITERATION_COMPLETED,
-                              handler=checkpoint_handler,
-                              to_save={
-                                  "transformer": transformer,
-                                  "opt": opt,
-                                  "lr_decay": lr_decay
-                              })
+@hydra.main(config_path="hyperparams/config.yaml")
+def run(cfg: DictConfig):
+    # logging.basicConfig(filename="validation.log",
+    #                     filemode="w",
+    #                     level=logging.INFO)
 
-    # Run the prediction
-    trainer.run(train_iter, max_epochs=cfg.training.epochs)
+    train_iter, val_iter, test_iter, source_vocab, target_vocab = create_dataset(
+        cfg.dataset)
+    model = MachineTranslationModel(OmegaConf.to_container(cfg, resolve=True),
+                                    source_vocab, target_vocab)
+    trainer = Trainer()
+    trainer.fit(model, train_iter, val_iter)
+    trainer.test(test_iter)
 
 
 if __name__ == '__main__':
