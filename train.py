@@ -10,11 +10,6 @@ from pytorch_lightning import Trainer, seed_everything
 # from src.utils.hooks import (validation_result_hook, restore_checkpoint_hook)
 from src.utils import print_current_prediction
 from torch.optim.lr_scheduler import StepLR
-# from ignite.engine import Events, Engine
-# from ignite.metrics import RunningAverage
-# from ignite.handlers import Timer
-# from ignite.handlers import ModelCheckpoint
-# from ignite.contrib.handlers import ProgressBar
 
 from src.models.transformer import Transformer
 from data import create_dataset
