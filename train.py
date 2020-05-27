@@ -1,4 +1,3 @@
-import logging
 import hydra
 import torch
 import torch.nn as nn
