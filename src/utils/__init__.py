@@ -1,17 +1,16 @@
 import random
 
 
-def print_current_prediction(engine, vocab):
-    n_sample = 100
+def print_current_prediction(predictions, targets, vocab):
+    n_sample = 100 if len(targets) >= 100 else len(targets)
     result_str = ""
     bold_code = "\033[1m"
     end_bold_code = "\033[0m"
     result_str += "Current state of the model\n"
     result_str += ("=" * 100) + "\n"
-    rand_ids = random.sample(range(len(engine.state.output["targets"])),
-                             n_sample)
-    pred_sample = [engine.state.output["predictions"][i] for i in rand_ids]
-    trg_sample = [engine.state.output["targets"][i] for i in rand_ids]
+    rand_ids = random.sample(range(len(targets)), n_sample)
+    pred_sample = [predictions[i] for i in rand_ids]
+    trg_sample = [targets[i] for i in rand_ids]
     for this_idx, (pred, trg) in enumerate(zip(pred_sample, trg_sample)):
         vocab_mapper = lambda x: vocab.itos[x]
         preds = list(map(vocab_mapper, pred))
