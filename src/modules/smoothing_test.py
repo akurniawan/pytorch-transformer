@@ -16,7 +16,3 @@ class SmoothingTest(unittest.TestCase):
 
         test = smoothed_label.sum(1).data.numpy()[0]
         self.assertAlmostEqual(round(test), 1.0)
-
-
-if __name__ == '__main__':
-    unittest.main()

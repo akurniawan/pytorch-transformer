@@ -16,12 +16,15 @@ def print_current_prediction(predictions, targets, vocab):
         preds = list(map(vocab_mapper, pred))
         trgs = list(map(vocab_mapper, trg))
         result_str += "{}Prediction{}: {}\n".format(
-            bold_code, end_bold_code, " ".join(preds[:len(trgs)]))
-        result_str += "{}Target{}: {}\n".format(bold_code, end_bold_code,
-                                                " ".join(trgs))
+            bold_code, end_bold_code, " ".join(preds[: len(trgs)])
+        )
+        result_str += "{}Target{}: {}\n".format(
+            bold_code, end_bold_code, " ".join(trgs)
+        )
         result_str += "{}Difference of length{}: {}\n\n".format(
-            bold_code, end_bold_code, abs(len(preds) - len(trgs)))
+            bold_code, end_bold_code, abs(len(preds) - len(trgs))
+        )
         if this_idx < len(pred_sample) - 1:
             result_str += "\n"
-    result_str += ("=" * 100)
+    result_str += "=" * 100
     print(result_str)

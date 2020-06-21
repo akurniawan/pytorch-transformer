@@ -21,8 +21,7 @@ class TransformerEncoder(nn.Module):
     def __init__(self, dim, num_head, num_layers):
         super().__init__()
 
-        self.layer = nn.Sequential(
-            *[_Layer(dim, num_head) for _ in range(num_layers)])
+        self.layer = nn.Sequential(*[_Layer(dim, num_head) for _ in range(num_layers)])
 
     def forward(self, src):
         return self.layer(src)
