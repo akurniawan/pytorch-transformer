@@ -1,5 +1,5 @@
 pytorch-ignite==0.1.2
 torch==1.0.1.post2
-numpy==1.16.1
+numpy==1.22.0
 torchtext==0.3.1
 six==1.10.0
